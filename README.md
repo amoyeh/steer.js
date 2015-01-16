@@ -13,14 +13,10 @@ It supports various moving behaviors that makes objects moving intelligently, an
 
 <br/>
 ## initial update
-<br/>
-
 this very first testing release contains the following  
 
-full source code hosted in github, currently licensed in LGPL.
-
-a list of examples to get started (comments are currently written in chinese)
-
-a online documentation page, we will be adding more informations such as demo code to the document.
+- full source code hosted in github, currently licensed in LGPL.
+- a list of examples to get started (comments are currently written in chinese)
+- a online documentation page, we will be adding more informations such as demo code to the document.
 
 this project is still in very early release, please download the project and starts from the example provided.
