@@ -245,20 +245,20 @@ call in domain.preUpdate function
 steer.BaseRender.prototype.update = function () { };
 
 /**
-intergrate item position using given delta
+integrate item position using given delta
 @param {number} delta - time elapsed
 */
-steer.BaseRender.prototype.intergrate = function () { };
+steer.BaseRender.prototype.integrate = function () { };
 
 /**
-called on every item in intergration event, used to update item position
+called on every item in integration event, used to update item position
 @param {steer.item.ItemBase} item - item to apply update
 @param {number} delta - time elapsed
 */
 steer.BaseRender.prototype.itemRender = function () { };
 
 /**
-called after all item finish intergration, used to render view
+called after all item finish integration, used to render view
 @param {number} delta - time elapsed
 */
 steer.BaseRender.prototype.visualRender = function () { };
