@@ -1,0 +1,301 @@
+﻿body {
+    padding: 0px;
+    margin: 0px;
+    background: #282828;
+    color: #FFF;
+    font-family: Arial;
+    font-size: 12px;
+}
+
+hr {
+    border-top: 1px solid #444;
+}
+
+.lineHr {
+    border-top: 1px dotted #444;
+}
+
+.indexLink {
+    font-size: 18px;
+    font-weight: bold;
+    color: #16a085;
+}
+
+    .indexLink:hover {
+        text-decoration: underline;
+        color: #1abc9c;
+    }
+
+#steerLogo {
+    position: absolute;
+    background: url('logoSmall.png');
+    width: 55px;
+    height: 20px;
+    right: 20px;
+    top: 20px;
+    z-index: 1000;
+    user-select: none;
+    pointer-events: none;
+}
+
+/** based on ipad 1024x690 */
+#mainView {
+    width: 1024px;
+    height: 800px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -512px;
+    margin-top: -400px;
+    box-sizing: border-box;
+}
+
+#divScreen {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 1024px;
+    height: 660px;
+    background: #333;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    overflow: hidden;
+}
+
+#controls {
+    position: absolute;
+    left: 0px;
+    top: 660px;
+    width: 1024px;
+    height: 140px;
+    background: #3A3A3A;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+#box2dDrawCanvas {
+    position: absolute;
+    -ms-transform: scale(0.25, 0.25);
+    -webkit-transform: scale(0.5, 0.25);
+    transform: scale(0.25, 0.25);
+    background: #222222;
+    left: 374px;
+    top: 237px;
+    opacity: 0.5;
+    border-radius: 20px;
+}
+
+.toggleBtn {
+    outline: none;
+    border: none;
+    background: #1abc9c;
+    border-radius: 6px;
+    height: 30px;
+    text-decoration: none;
+    color: #ffffff;
+    position:relative;
+    bottom:5px;
+    width:120px;
+}
+
+.toggleBtnOn {
+    background: #0b7762;
+}
+
+.baseBtn {
+    outline: none;
+    border: none;
+    background: #1abc9c;
+    border-radius: 6px;
+    height: 30px;
+    text-decoration: none;
+    color: #ffffff;
+}
+
+    .baseBtn:active {
+        background: #16a085;
+        text-decoration: none;
+    }
+
+/* UI controls */
+/* ----------------------------------------------------------------- */
+#rangeIntegrate {
+    width: 250px;
+    top: 8px;
+    position: absolute;
+}
+
+#rangeIntegrateTxt {
+    position: absolute;
+    left: 270px;
+    top: 6px;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: rgba(255, 255, 255, 0);
+    height: 8px;
+    border: none;
+    border-radius: 4px;
+    background: #2B2B2B;
+    outline: none;
+}
+
+    input[type="range"]::-moz-range-track {
+        border: inherit;
+        background: transparent;
+    }
+
+    input[type="range"]::-ms-track {
+        border: inherit;
+        color: transparent;
+        background: transparent;
+    }
+
+    input[type="range"]::-ms-fill-lower,
+    input[type="range"]::-ms-fill-upper {
+        background: transparent;
+    }
+
+    input[type="range"]::-ms-tooltip {
+        display: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 40px;
+        height: 20px;
+        border: none;
+        border-radius: 4px;
+        background: #1abc9c;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        width: 40px;
+        height: 20px;
+        border: none;
+        border-radius: 4px;
+        background: #1abc9c;
+    }
+
+    input[type="range"]::-ms-thumb {
+        width: 40px;
+        height: 20px;
+        border-radius: 4px;
+        border: 0;
+        background: #1abc9c;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:active {
+        background: #16a085;
+    }
+
+    input[type="range"]::-moz-range-thumb:active {
+        background: #16a085;
+    }
+
+    input[type="range"]::-ms-thumb:active {
+        background: #16a085;
+    }
+
+
+
+/* contrains a row of uis */
+.rowUis {
+    float: left;
+    width: 1024px;
+    height: 60px;
+    padding-top: 20px;
+    padding-left: 20px;
+    box-sizing: border-box;
+}
+
+/*contains a ui control width is varied in given example */
+.uiSet {
+    position: relative;
+    float: left;
+}
+
+/*button , width is varied in given example */
+.uiBtn {
+    outline: none;
+    border: none;
+    background: #1abc9c;
+    border-radius: 6px;
+    height: 30px;
+    bottom: 5px;
+    text-decoration: none;
+    color: #ffffff;
+    position: relative;
+}
+
+    .uiBtn:active {
+        background: #16a085;
+        text-decoration: none;
+    }
+
+/* draggble range default style */
+.uiRange {
+    width: 140px;
+    position: relative;
+    top:3px;
+}
+.uiRangeTxt {
+    position: relative;
+    left: 160px;
+    top: -12px;
+    width: 200px;
+}
+
+/* toggle on off ui default style */
+/* text on the right side of the toggle */
+.toggleTxt {
+    position: absolute;
+    left: 70px;
+    top: 2px;
+}
+
+.checkbox {
+    display: inline-block;
+    position: relative;
+    text-align: left;
+    width: 60px;
+    height: 18px;
+    background-color: #2B2B2B;
+    border-radius: 4px;
+}
+
+    .checkbox input {
+        display: block;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+        opacity: 0;
+        filter: alpha(opacity=0);
+        z-index: 2;
+    }
+
+    .checkbox label {
+        background-color: #EEE;
+        border-radius: 4px;
+        display: inline-block;
+        width: 30px;
+        text-align: center;
+        color: #EEE;
+        height: 20px;
+        -webkit-transition: margin-left 0.2s ease-in-out;
+        -moz-transition: margin-left 0.2s ease-in-out;
+        -ms-transition: margin-left 0.2s ease-in-out;
+        -o-transition: margin-left 0.2s ease-in-out;
+        transition: margin-left 0.2s ease-in-out;
+        margin: -1px;
+    }
+
+
+
+    .checkbox input:checked + label {
+        margin-left: 30px;
+        background-color: #1abc9c;
+        color: white;
+    }

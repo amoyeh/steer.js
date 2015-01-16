@@ -1,0 +1,155 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>QuadTree</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <!-- 載入 box2d, pixi and steer 依下列順序 -->
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene();">
+
+    <div id="mainView">
+        <div id="divScreen"></div>
+        <div id="controls">
+
+            <div class="rowUis">
+                <div class="uiSet" style="width: 150px;">
+                    <input type="range" class="uiRange" id="rangeQuadId" min="0" max="9" step="1" value="0" />
+                    <div class="uiRangeTxt" id="rangeQuadIdTxt">Target Index: 0</div>
+                </div>
+            </div>
+        </div>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function initScene() {
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 1024, 660);
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+
+            //建立QuadTree (x: number, y: number, w: number, h: number, depth: number, maxChildren: number = 3, maxDepth: number = 4)
+            var quadTree = new steer.item.QuadTree(0, 0, 1024 / 30, 660 / 30, 3);
+            quadTree.drawDebug = true;
+            domain.setupSelector(quadTree);
+
+            //建立 10 個 Unit 物件 並設定為隨機位置
+            var units = [];
+            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 5, maxSpeed: 10, dynamic: true, canCollide: true };
+            for (var t = 0; t < 20 ; t++) {
+                unitInfo.x = steer.MathUtil.range(50, 974);
+                unitInfo.y = steer.MathUtil.range(50, 610);
+                var newUnit = steer.item.Creator.createUnit(unitInfo);
+                steer.controls.Behavior.initWander(newUnit, 1, 20);
+                units.push(newUnit);
+                var ddInfo = steer.render.DebugDrawInfo.create(newUnit);
+                ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST | steer.render.DebugDrawInfo.UNIT_SEPARATION | steer.render.DebugDrawInfo.UNIT_COHESION | steer.render.DebugDrawInfo.UNIT_ALIGNMENT | steer.render.DebugDrawInfo.BOUNDING_BOX;
+            }
+
+            //UI控制目標
+            var targetId = 0;
+
+            //測式圖形
+            var circle1 = steer.item.Creator.createCircle({ x: 100, y: 100, radius: 25, dynamic: false });
+            var cricle2 = steer.item.Creator.createCircle({ x: 300, y: 150, radius: 50, dynamic: true });
+            var poly1 = steer.item.Creator.createPolygon({ x: 630, y: 100, widthHalf: 40, heightHalf: 30, asBoxCenter: true, dynamic: false });
+            var poly2 = steer.item.Creator.createPolygon({ x: 800, y: 260, widthHalf: 20, heightHalf: 20, asBoxCenter: true, dynamic: true });
+            var poly3 = steer.item.Creator.createPolygon({
+                x: 850, y: 400, asPolygon: true, vertices: [
+                    new steer.Vector(0, 0), new steer.Vector(50, -10), new steer.Vector(100, 30), new steer.Vector(70, 60),
+                    new steer.Vector(40, 60), new steer.Vector(10, 40)
+                ], dynamic: true
+            });
+            steer.item.Creator.createEdge({
+                x: 570, y: 510, asEdge: true, vertices: [new steer.Vector(0, 0), new steer.Vector(50, 50)]
+            });
+            var borderInfo = steer.CreateInfo = {
+                asPolygonBorder: true, polygonBorderInside: true, polygonBorderWidth: 5,
+                polygonBorderTL: new steer.Vector(420, 350), polygonBorderBR: new steer.Vector(480, 400)
+            }
+            var borders = steer.item.Creator.createPolygonBorder(borderInfo);
+
+            var myTimer = new steer.SteerTimer(20);
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+                var delta = e.values.delta;
+                domain.preUpdate();
+
+                //隨機移動更新
+                var len = units.length;
+                while (len--) {
+                    var wanderForce = steer.controls.Behavior.wander(units[len]);
+                    units[len].applyForce(wanderForce);
+                    wrapUnit(units[len]); //in controlHelper.js
+                }
+
+                wrapUnit(cricle2);
+                wrapUnit(poly2);
+                wrapUnit(poly3);
+
+                //清除 pixiDR.drawDot .. pixiDR.drawSegment 圖形更新
+                pixiDR.guideGrahpic.clear();
+
+                //繪製quadTree 資訊
+                var qsels = domain.selector.quadTreeSelect(units[targetId]);
+                if (qsels) {
+                    for (var k = 0; k < qsels.length; k++) {
+                        if (qsels[k].data.b2body) {
+                            pixiDR.drawDot(qsels[k].data.getb2Position(), 0x33CC33, 0.05);
+                            pixiDR.drawSegment(units[targetId].getb2Position(), qsels[k].data.getb2Position(), 0x33CC33, 0.05, 0.2);
+                        }
+                    }
+                }
+                pixiDR.drawDot(units[targetId].getb2Position(), 0xFF33CC, 0.2);
+                domain.update(delta);
+            });
+
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+            });
+
+            myTimer.start();
+
+            //testing a step by keyboard
+            //document.addEventListener("keydown", function (e) {
+            //    if (e.keyCode == 32) {
+            //        var delta = 20;
+            //        var now = new Date().getTime();
+            //        domain.preUpdate();
+            //        domain.update(delta);
+            //        var len = units.length;
+            //        while (len--) {
+            //            var wanderForce = steer.controls.Behavior.wander(units[len]);
+            //            units[len].applyForce(wanderForce);
+            //            wrapUnit(units[len]); //in controlHelper.js
+            //        }
+            //        pixiDR.integrate(0);
+            //        e.preventDefault();
+            //    }
+            //});
+
+            ////////////////////////////////////////////////////////
+            //UI 控制
+            ///////////////////////////////////////////////////////
+            document.getElementById("rangeQuadId").addEventListener("input", function (e) {
+                document.getElementById("rangeQuadIdTxt").innerText = "Target Index: " + e.target.value;
+                targetId = e.target.value;
+            });
+
+        }
+
+    </script>
+
+</body>
+</html>

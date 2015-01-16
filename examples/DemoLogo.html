@@ -1,0 +1,274 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Logo Demo</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <!--<script src="../src/ClassLoader.js"></script>-->
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene();">
+
+
+    <object id="svgObj" type="image/svg+xml" data="logo.svg" style="opacity:0;"></object>
+    <div id="mainView">
+        <div id="divScreen"></div>
+        <div id="steerLogo"></div>
+        <div id="perTxt" style="position:absolute; left:20px; top:635px; font: 11px arial;"></div>
+        <div id="renderTxt" style="position:absolute; left:165px; top:635px; font: 11px arial;"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        window["performance"] = window.performance || {};
+        performance.now = (function () {
+            return performance.now ||
+            performance.webkitNow ||
+            performance.msNow ||
+            performance.oNow ||
+            performance.mozNow ||
+            function () { return new Date().getTime(); };
+        })();
+
+        var mouseUnit;
+
+        function initScene() {
+
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: false, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            //var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 1024, 660);
+
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+
+            var pathWidth = 10;
+            var pathSeg = 3;
+
+            //從指定 SVG Path Element 產生路徑
+            var svgPathElm = document.getElementById("svgObj").getSVGDocument().getElementById("steer");
+            var pathInfo = new steer.item.PathInfo(new steer.Vector(90, 160), pathWidth, pathSeg);
+            steer.item.PathInfo.fillSVGPathElement(svgPathElm, pathInfo);
+            pathSteer = steer.item.Creator.createPath({ pathInfo: pathInfo });
+
+            var pathInfoE1 = new steer.item.PathInfo(new steer.Vector(90, 160), pathWidth, pathSeg);
+            steer.item.PathInfo.fillSVGPathElement(document.getElementById("svgObj").getSVGDocument().getElementById("eCenter1"), pathInfoE1);
+            pathE1 = steer.item.Creator.createPath({ pathInfo: pathInfoE1 });
+
+            var pathInfoE2 = new steer.item.PathInfo(new steer.Vector(90, 160), pathWidth, pathSeg);
+            steer.item.PathInfo.fillSVGPathElement(document.getElementById("svgObj").getSVGDocument().getElementById("eCenter2"), pathInfoE2);
+            pathE2 = steer.item.Creator.createPath({ pathInfo: pathInfoE2 });
+
+            var pathInfoD1 = new steer.item.PathInfo(new steer.Vector(90, 160), pathWidth, pathSeg);
+            steer.item.PathInfo.fillSVGPathElement(document.getElementById("svgObj").getSVGDocument().getElementById("dot1"), pathInfoD1);
+            pathDot1 = steer.item.Creator.createPath({ pathInfo: pathInfoD1 });
+
+            var pathInfoD2 = new steer.item.PathInfo(new steer.Vector(90, 160), pathWidth, pathSeg);
+            steer.item.PathInfo.fillSVGPathElement(document.getElementById("svgObj").getSVGDocument().getElementById("dot2"), pathInfoD2);
+            pathDot2 = steer.item.Creator.createPath({ pathInfo: pathInfoD2 });
+
+            var pathInfoJ = new steer.item.PathInfo(new steer.Vector(90, 160), pathWidth, pathSeg);
+            steer.item.PathInfo.fillSVGPathElement(document.getElementById("svgObj").getSVGDocument().getElementById("j"), pathInfoJ);
+            pathJ = steer.item.Creator.createPath({ pathInfo: pathInfoJ });
+
+            var pathInfoJC = new steer.item.PathInfo(new steer.Vector(90, 160), pathWidth, pathSeg);
+            steer.item.PathInfo.fillSVGPathElement(document.getElementById("svgObj").getSVGDocument().getElementById("jCenter"), pathInfoJC);
+            pathJC = steer.item.Creator.createPath({ pathInfo: pathInfoJC });
+
+            var pathInfoS = new steer.item.PathInfo(new steer.Vector(90, 160), pathWidth, pathSeg);
+            steer.item.PathInfo.fillSVGPathElement(document.getElementById("svgObj").getSVGDocument().getElementById("s"), pathInfoS);
+            pathS = steer.item.Creator.createPath({ pathInfo: pathInfoS });
+
+            document.getElementById("svgObj").remove();
+
+            steer.render.DebugColors.DC_DYNAMIC_A = 1;
+
+            var texture = PIXI.Texture.fromImage("lightDot.png");
+            var lightContainer = new PIXI.DisplayObjectContainer();
+            pixiStage.addChild(lightContainer);
+            function createAUnit(toArray, toPath, i, xto, yto) {
+                var unitInfo = { dynamic: true, canCollide: false };
+                unitInfo.x = Math.floor(i / 50) * 100;
+                unitInfo.y = steer.MathUtil.range(50, 610);
+                if(xto){
+                    unitInfo.x = xto + steer.MathUtil.range(-50, 50);
+                    unitInfo.y = yto + steer.MathUtil.range(-50, 50);
+                }
+                unitInfo.radius = 12;
+                unitInfo.maxSpeed = steer.MathUtil.range(30, 40);
+                unitInfo.maxForce = 9;
+                var newUnit = steer.item.Creator.createUnit(unitInfo);
+                toArray.push(newUnit);
+                newUnit.pathVelocityRatio = 0.1;
+                newUnit.pathOnFrontRatio = 0.1;
+                steer.controls.Behavior.initPathUnit(newUnit, toPath, true, true, 1);
+                var light = new PIXI.Sprite(texture);
+                lightContainer.addChild(light);
+                newUnit.data = light;
+            }
+            var unitsSteer = [], unitsE1 = [], unitsE2 = [], unitsDot1 = [], unitsDot2 = [], unitsJ = [], unitsJC = [], unitsS = [];
+            var steerAmt = 600;
+            var EAmt = 40;
+            var JAmt = 150;
+            var JCAmt = 50;
+            var SAmt = 150;
+            var totalUnits = steerAmt + EAmt + JAmt + JCAmt + SAmt;
+            for (var t = 0; t < steerAmt ; t++) {
+                var pos = t % pathSteer.segments.length;
+                var xto = pathSteer.segments[pos].x * 30 - 10;
+                var yto = pathSteer.segments[pos].y * 30 - 10;
+                createAUnit(unitsSteer, pathSteer, t, xto, yto);
+            }
+            for (var t = 0; t < EAmt ; t++) {
+                var pos = t % pathE1.segments.length;
+                var xto = pathE1.segments[pos].x * 30 - 10;
+                var yto = pathE1.segments[pos].y * 30 - 10;
+                createAUnit(unitsE1, pathE1, t, xto, yto);
+                xto = pathE2.segments[pos].x * 30 - 10;
+                yto = pathE2.segments[pos].y * 30 - 10;
+                createAUnit(unitsE2, pathE2, t, xto, yto);
+                xto = pathDot1.segments[pos].x * 30 - 10;
+                yto = pathDot1.segments[pos].y * 30 - 10;
+                createAUnit(unitsDot1, pathDot1, t, xto, yto);
+                xto = pathDot2.segments[pos].x * 30 - 10;
+                yto = pathDot2.segments[pos].y * 30 - 10;
+                createAUnit(unitsDot2, pathDot2, t, xto, yto);
+            }
+            for (var t = 0; t < JAmt ; t++) {
+                var pos = t % pathJ.segments.length;
+                var xto = pathJ.segments[pos].x * 30 - 10;
+                var yto = pathJ.segments[pos].y * 30 - 10;
+                createAUnit(unitsJ, pathJ, t, xto , yto);
+            }
+            for (var t = 0; t < JCAmt ; t++) {
+                var pos = t % pathJC.segments.length;
+                var xto = pathJC.segments[pos].x * 30 - 10;
+                var yto = pathJC.segments[pos].y * 30 - 10;
+                createAUnit(unitsJC, pathJC, t, xto, yto);
+            }
+            for (var t = 0; t < SAmt ; t++) {
+                var pos = t % pathS.segments.length;
+                var xto = pathS.segments[pos].x * 30 - 10;
+                var yto = pathS.segments[pos].y * 30 - 10;
+                createAUnit(unitsS, pathS, t, xto, yto);
+            }
+
+            var myTimer = new steer.SteerTimer(20);
+            var diffSum = 0;
+            var diffCount = 0;
+
+            //增加BaseRender 透過設定updateObject 更新對應的物件座標
+            var baseDR = new steer.BaseRender(domain, 1024, 660);
+            baseDR.updateObject = {
+                "updateItem": function (item, xto, yto, rto, delta) {
+                    if (item.data) {
+                        item.data.position.x = xto * 30 - 10;
+                        item.data.position.y = yto * 30 - 10;
+                    }
+                },
+                "updateStep": function (delta) {
+                    pixiRenderer.render(pixiStage);
+                }
+            }
+            //將Renderer加入domain
+            domain.addRenderer(baseDR);
+
+            //跟隨點選拖曳座標的隱藏Unit，達到路徑上物件散開效果
+            mouseUnit = steer.item.Creator.createUnit({ x: 10, y: 10, radius: 50, maxSpeed: 50, maxForce: 50, dynamic: true });
+
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+                var now = performance.now();
+                var delta = e.values.delta;
+                domain.preUpdate();
+                var len = steerAmt;
+                while (len--) {
+                    unitsSteer[len].applyForce(steer.controls.Behavior.followPath(unitsSteer[len], pathSteer));
+                    unitsSteer[len].applyForce(steer.controls.Behavior.separation(unitsSteer[len], [mouseUnit]));
+                }
+                len = EAmt;
+                while (len--) {
+                    unitsE1[len].applyForce(steer.controls.Behavior.followPath(unitsE1[len], pathE1));
+                    unitsE1[len].applyForce(steer.controls.Behavior.separation(unitsE1[len], [mouseUnit]));
+
+                    unitsE2[len].applyForce(steer.controls.Behavior.followPath(unitsE2[len], pathE2));
+                    unitsE2[len].applyForce(steer.controls.Behavior.separation(unitsE2[len], [mouseUnit]));
+
+                    unitsDot1[len].applyForce(steer.controls.Behavior.followPath(unitsDot1[len], pathDot1));
+                    unitsDot1[len].applyForce(steer.controls.Behavior.separation(unitsDot1[len], [mouseUnit]));
+
+                    unitsDot2[len].applyForce(steer.controls.Behavior.followPath(unitsDot2[len], pathDot2));
+                    unitsDot2[len].applyForce(steer.controls.Behavior.separation(unitsDot2[len], [mouseUnit]));
+
+                }
+                len = JAmt;
+                while (len--) {
+                    unitsJ[len].applyForce(steer.controls.Behavior.followPath(unitsJ[len], pathJ));
+                    unitsJ[len].applyForce(steer.controls.Behavior.separation(unitsJ[len], [mouseUnit]));
+                }
+                len = JCAmt;
+                while (len--) {
+                    unitsJC[len].applyForce(steer.controls.Behavior.followPath(unitsJC[len], pathJC));
+                    unitsJC[len].applyForce(steer.controls.Behavior.separation(unitsJC[len], [mouseUnit]));
+                }
+                len = SAmt;
+                while (len--) {
+                    unitsS[len].applyForce(steer.controls.Behavior.followPath(unitsS[len], pathS));
+                    unitsS[len].applyForce(steer.controls.Behavior.separation(unitsS[len], [mouseUnit]));
+                }
+
+                domain.update(delta);
+
+                diffSum += performance.now() - now;
+                diffCount += 1;
+                var diffAvg = Math.round((diffSum / diffCount) * 100) / 100;
+                document.getElementById("perTxt").innerHTML = totalUnits + "units <span style='padding-left:10px;'>logic: " + diffAvg + " ms</span>";
+            });
+
+            var RSum = 0;
+            var RCount = 0;
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                var now = performance.now();
+                var delta = e.values.delta;
+                domain.integrate(delta);
+                RSum += performance.now() - now;
+                RCount += 1;
+                var diffAvg = Math.round((RSum / RCount) * 100) / 100;
+                document.getElementById("renderTxt").innerText = "render: " + diffAvg + " ms";
+            });
+            myTimer.start();
+
+        }
+
+        //點選或拖曳 時取得 mainView 滑鼠座標
+        var mousePt = { x: 0, y: 0 };
+        function mouseMoveCall(e) { mouseUpdate(e); }
+        document.addEventListener("mousedown", function (e) {
+            mouseUpdate(e);
+            document.addEventListener("mousemove", mouseMoveCall);
+        });
+        document.addEventListener("mouseup", function (e) {
+            document.removeEventListener("mousemove", mouseMoveCall);
+            if (mouseUnit) mouseUnit.setb2Position(0, 0);
+        });
+        document.addEventListener("touchstart", mouseUpdate);
+        document.addEventListener("touchmove", mouseUpdate);
+        function mouseUpdate(e) {
+            if (e.changedTouches) {
+                mousePt.x = (e.changedTouches[0].clientX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.changedTouches[0].clientY - document.getElementById("mainView").offsetTop) / 30;
+            } else if (e.pageX) {
+                mousePt.x = (e.pageX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.pageY - document.getElementById("mainView").offsetTop) / 30;
+            }
+            if (mouseUnit) mouseUnit.setb2Position(mousePt.x, mousePt.y);
+            e.preventDefault();
+        }
+
+    </script>
+
+</body>
+</html>

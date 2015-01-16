@@ -1,0 +1,106 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Integration</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene();">
+
+    <div id="mainView">
+        <div id="divScreen"></div>
+        <div id="controls">
+            <div class="rowUis">
+                <div class="uiSet" style="width: 180px;">
+                    <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
+                </div>
+                <div class="uiSet" style="width: 400px;">
+                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
+                    <div id="rangeIntegrateTxt">20 FPS</div>
+                </div>
+            </div> 
+        </div>
+        <canvas id="box2dDrawCanvas" width="1024" height="660" style="display:none;"></canvas>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function initScene() {
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+
+            //建立box2d除錯顯示物體資訊
+            domain.createBox2dDebugDraw("box2dDrawCanvas", box2d.b2DrawFlags.e_none | box2d.b2DrawFlags.e_shapeBit | box2d.b2DrawFlags.e_centerOfMassBit);
+
+            //建立 20 個 Unit 物件 並設定為隨機位置
+            var units = [];
+            var unitInfo = { x: 0, y: 0, radius: 15, maxForce: 10, maxSpeed: 25, dynamic: true, canCollide: false };
+            for (var t = 0; t < 20 ; t++) {
+                unitInfo.x = steer.MathUtil.range(50, 974);
+                unitInfo.y = steer.MathUtil.range(50, 610);
+                var newUnit = steer.item.Creator.createUnit(unitInfo);
+                //設定隨機速度
+                newUnit.velocity = steer.Vector.random(-10, 10, -10, 10);
+                units.push(newUnit);
+
+            }
+
+
+            // 建立 SteerTimer 設定更新頻率 20 FPS
+            var myTimer = new steer.SteerTimer(20);
+
+            //設定 每次運算時 LOGIC_UPDATE 時更新運算
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+
+                //delta 紀載 每次更新的時間差
+                var delta = e.values.delta;
+
+                //在更新任何動作前設定 domain.preUpdate() (目的為紀錄可能使用的參數，增加運算效能)
+                domain.preUpdate();
+
+                //當設定顯示 box2d 除錯資訊時 domain.createBox2dDebugDraw(..)
+                //清空 box2d 顯示繪圖資訊
+                domain.box2dDebugDraw.m_ctx.clearRect(0, 0, 2000, 2000);
+
+                //如果unit移動超過範圍，從另一端出現
+                var len = units.length;
+                while (len--) wrapUnit(units[len]);
+
+                //更新 domain 帶入每次更新的時間差，透過經過時間做為移動大小的依據
+                domain.update(delta);
+
+                //當設定顯示 box2d 除錯資訊時 domain.createBox2dDebugDraw(..)
+                //重新顯示繪圖資訊
+                domain.b2World.DrawDebugData();
+
+            });
+
+            //設定 畫面更新運算 RENDER_UPDATE (每秒 60次)
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+            });
+
+            //SteerTimer 開始運算
+            myTimer.start();
+
+            generalControls(myTimer); //in controlHelper.js
+
+        }
+
+    </script>
+
+</body>
+</html>

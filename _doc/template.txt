@@ -1,0 +1,116 @@
+﻿/**
+namespace 命名方式
+@namespace ui
+*/
+var ui = {};
+
+
+/**
+物件建立式A
+@constructor
+@extends ui.VideoInfo
+@param {string} sourceType - 
+@param {number} totalSeconds - 
+@param {object} [totalSeconds] - optional
+@param {(string|string[])} [somebody=John Doe] - Somebody's name, or an array of names.
+@example
+*/
+ui.VideoInfo = function () {
+	 /** @property {string} youtubeVideoId - 使用youtube影片來源時，Youtube 影片 Id */
+    this.youtubeVideoId;
+}
+
+//static 範例
+/**@property {string} appId - 登入使用的facebook app id */ 
+social.FBInfo.appId;
+
+/**
+設定音量
+@param {number} volume - 音量數值 0 ~ 100
+@param {number} totalSeconds - 
+@param {object} [totalSeconds] - optional
+@param {(string|string[])} [somebody=John Doe] - Somebody's name, or an array of names.
+*/
+ui.VideoInfo.prototype.volume = function () { };
+
+
+
+//####################################################################################
+//REPLACE
+//####################################################################################
+
+[FIND]
+	public\s(.*.):.*;
+
+[REPLACE]
+	this.$1;
+
+	public screenDiv: JQuery; 
+	改變為 
+	this.screenDiv;
+
+--------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+//--------------------------------------------------------------------------
+avoid using following keywords as namespace , class function or property name
+//--------------------------------------------------------------------------
+break
+case
+catch
+continue
+default
+delete
+do
+else
+finally
+for
+function
+if
+in
+instanceof
+new
+return
+switch
+this
+throw
+try
+typeof
+var
+void
+while
+with
+abstract
+boolean
+byte
+char
+class
+debugger
+double
+enum
+extends
+final
+float
+goto
+implements
+int
+interface
+long
+native
+package
+private
+protected
+public
+short
+static
+super
+synchronized
+throws
+transient
+volatile

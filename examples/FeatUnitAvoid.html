@@ -1,0 +1,191 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Unit Avoidance</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene()">
+
+    <div id="mainView">
+        <div id="divScreen"></div>
+        <div id="controls">
+
+            <div class="rowUis">
+
+                <div class="uiSet" style="width: 190px;">
+                    <div class="toggleTxt">Unit Avoidance</div>
+                    <span class="checkbox"><input id="ckUnitAvoid" type="checkbox" checked><label></label></span>
+                </div>
+                <div class="uiSet" style="width: 190px;">
+                    <div class="toggleTxt">Show Force</div>
+                    <span class="checkbox"><input id="ckShowForce" type="checkbox" checked><label></label></span>
+                </div>
+                <div class="uiSet" style="width: 140px;">
+                    <input type="button" id="btnRun" class="uiBtn" style="width:120px;" value="Run" />
+                </div>
+                <div class="uiSet" style="width: 140px;">
+                    <input type="button" id="btnRunStep" class="uiBtn" style="width:120px;" value="Run A Step" />
+                </div>
+                <div class="uiSet" style="width: 140px;">
+                    <input type="button" id="btnReset" class="uiBtn" style="width:120px;" value="Reset" />
+                </div>
+            </div>
+
+            <hr style="width:1000px; border:none; border-top: 1px solid #474747;" />
+            <div class="rowUis">
+                <div class="uiSet" style="width: 180px;">
+                    <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
+                </div>
+                <div class="uiSet" style="width: 400px;">
+                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
+                    <div id="rangeIntegrateTxt">20 FPS</div>
+                </div>
+            </div>
+
+        </div>
+        <canvas id="box2dDrawCanvas" width="1024" height="660" style="display:none;"></canvas>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function initScene() {
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+            domain.createBox2dDebugDraw("box2dDrawCanvas", box2d.b2DrawFlags.e_none | box2d.b2DrawFlags.e_shapeBit | box2d.b2DrawFlags.e_centerOfMassBit);
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+
+            var units = [];
+            var settings = [
+                //opposide test
+                { s: { x: 100, y: 100 }, e: { x: 300, y: 100 } }, { s: { x: 300, y: 100 }, e: { x: 100, y: 100 } },
+                //parallel
+                { s: { x: 80, y: 200 }, e: { x: 300, y: 250 } }, { s: { x: 100, y: 250 }, e: { x: 300, y: 200 } },
+                { s: { x: 300, y: 300 }, e: { x: 100, y: 350 } }, { s: { x: 300, y: 350 }, e: { x: 100, y: 300 } },
+                { s: { x: 100, y: 600 }, e: { x: 150, y: 400 } }, { s: { x: 150, y: 600 }, e: { x: 100, y: 400 } },
+                { s: { x: 250, y: 400 }, e: { x: 300, y: 600 } }, { s: { x: 300, y: 400 }, e: { x: 250, y: 600 } },
+                //left & top , left & down
+                { s: { x: 400, y: 100 }, e: { x: 550, y: 100 } }, { s: { x: 500, y: 150 }, e: { x: 500, y: 50 } },
+                { s: { x: 600, y: 100 }, e: { x: 700, y: 130 } }, { s: { x: 630, y: 130 }, e: { x: 750, y: 80 } },
+                { s: { x: 780, y: 200 }, e: { x: 950, y: 200 } }, { s: { x: 880, y: 100 }, e: { x: 880, y: 260 } },
+                //cross
+                { s: { x: 400, y: 300 }, e: { x: 600, y: 300 } }, { s: { x: 500, y: 200 }, e: { x: 500, y: 400 } },
+                { s: { x: 600, y: 300 }, e: { x: 400, y: 300 } }, { s: { x: 500, y: 400 }, e: { x: 500, y: 200 } },
+                //up down & left right
+                { s: { x: 680, y: 350 }, e: { x: 680, y: 500 } }, { s: { x: 720, y: 350 }, e: { x: 720, y: 500 } },
+                { s: { x: 760, y: 350 }, e: { x: 760, y: 500 } }, { s: { x: 800, y: 350 }, e: { x: 800, y: 500 } },
+                { s: { x: 680, y: 500 }, e: { x: 680, y: 350 } }, { s: { x: 720, y: 500 }, e: { x: 720, y: 350 } },
+                { s: { x: 760, y: 500 }, e: { x: 760, y: 350 } }, { s: { x: 800, y: 500 }, e: { x: 800, y: 350 } },
+                { s: { x: 600, y: 400 }, e: { x: 880, y: 460 } }, { s: { x: 880, y: 460 }, e: { x: 600, y: 400 } },
+                { s: { x: 600, y: 460 }, e: { x: 880, y: 400 } }, { s: { x: 880, y: 400 }, e: { x: 600, y: 460 } }
+            ];
+
+            for (var t = 0; t < settings.length; t++) {
+                var newOne = steer.item.Creator.createUnit({
+                    x: settings[t].s.x, y: settings[t].s.y, radius: 10, maxForce: 10, maxSpeed: 20, dynamic: true, canCollide: true
+                });
+                newOne.toPt = { x: settings[t].e.x / 30, y: settings[t].e.y / 30 };
+                newOne.startPt = { x: settings[t].s.x / 30, y: settings[t].s.y / 30 };
+                units.push(newOne);
+                var ddinfo = steer.render.DebugDrawInfo.create(newOne);
+                ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST | steer.render.DebugDrawInfo.UNIT_SEPARATION | steer.render.DebugDrawInfo.AVOID_FORCE;
+            }
+
+            function logicUpdate() {
+                //清空除錯繪圖
+                pixiDR.guideGrahpic.clear();
+                for (var t = 0; t < units.length; t++) {
+                    var loopOne = units[t];
+                    loopOne.applyForce(steer.controls.Behavior.seek(loopOne, new steer.Vector(loopOne.toPt.x, loopOne.toPt.y)));
+                    //only apply avoidance when UI checkbox is on
+                    if (document.getElementById("ckUnitAvoid").checked) loopOne.applyForce(steer.controls.Behavior.avoidUnit(loopOne, units));
+                    pixiDR.drawDot(loopOne.toPt, 0xCCFF33, 0.6, .5);
+                }
+            }
+
+            var myTimer = new steer.SteerTimer(20);
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+                runStep(e.values.delta);
+            });
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+            });
+
+            function resetUnits() {
+                for (var t = 0; t < units.length; t++) {
+                    var loopOne = units[t];
+                    loopOne.resetVelocity();
+                    loopOne.setb2Position(loopOne.startPt.x, loopOne.startPt.y);
+                }
+                runStep(0);
+            }
+
+            function runStep(delta) {
+                domain.preUpdate();
+                domain.box2dDebugDraw.m_ctx.clearRect(0, 0, 2000, 2000);
+                logicUpdate();
+                domain.update(delta);
+                //run a step render directly
+                pixiDR.integrate(0);
+                domain.b2World.DrawDebugData();
+            }
+
+            //myTimer.start();
+            document.addEventListener("keydown", function (e) {
+                if (e.keyCode == 32) {
+                    runStep(1000 / document.getElementById("rangeIntegrate").value);
+                    e.preventDefault();
+                }
+            });
+            //執行顯示初始畫面
+            runStep(0);
+
+            //UI controls
+            //-------------------------------------------------------------------
+            generalControls(myTimer); //in controlHelper.js
+
+
+            document.getElementById("ckShowForce").addEventListener("change", function (e) {
+                for (var t = 0; t < units.length; t++) {
+                    var ddinfo = steer.render.DebugDrawInfo.getInfo(units[t]);
+                    if (ddinfo) {
+                        if (document.getElementById("ckShowForce").checked) {
+                            ddinfo.drawMask |= steer.render.DebugDrawInfo.AVOID_FORCE;
+                        } else {
+                            ddinfo.drawMask &= ~steer.render.DebugDrawInfo.AVOID_FORCE;
+                        }
+                    }
+                }
+                runStep(0);
+            });
+
+            document.getElementById("btnReset").addEventListener("click", function (e) {
+                resetUnits();
+            });
+            document.getElementById("btnRun").addEventListener("click", function (e) {
+                if (!myTimer.isRunning()) myTimer.start();
+            });
+            document.getElementById("btnRunStep").addEventListener("click", function (e) {
+                if (myTimer.isRunning()) myTimer.stop();
+                runStep(1000 / document.getElementById("rangeIntegrate").value);
+            });
+
+        }
+
+
+    </script>
+
+</body>
+</html>

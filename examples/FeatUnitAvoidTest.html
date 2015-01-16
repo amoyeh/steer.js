@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Unit Avoidance Test</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene()">
+
+    <div id="mainView" style=" height:660px; margin-top: -330px;">
+        <div id="divScreen" style="border-radius:4px;"></div>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function initScene() {
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+
+            //建立 20 個 Unit 物件 並設定為隨機移動
+            var units = [];
+            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 10, maxSpeed: 15, dynamic: true, canCollide: true };
+            for (var t = 0; t < 40 ; t++) {
+                unitInfo.x = steer.MathUtil.range(50, 974);
+                unitInfo.y = steer.MathUtil.range(50, 610);
+                var newUnit = steer.item.Creator.createUnit(unitInfo);
+                var ddinfo = steer.render.DebugDrawInfo.create(newUnit);
+                ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST | steer.render.DebugDrawInfo.UNIT_SEPARATION | steer.render.DebugDrawInfo.AVOID_FORCE;
+                units.push(newUnit);
+                newUnit.velocity = steer.Vector.random(-10, 10, -10, 10);
+            }
+
+            function logicUpdate() {
+
+                //清空除錯繪圖
+                pixiDR.guideGrahpic.clear();
+
+                //隨機移動更新
+                var len = units.length;
+                while (len--) {
+                    var avoidVec = steer.controls.Behavior.avoidUnit(units[len], units);
+                    if (units[len].velocity.mag() < 0.5) {
+                        units[len].velocity = steer.Vector.random(-1, 1, -1, 1);
+                    }
+                    units[len].applyForce(avoidVec, 2);
+                    wrapUnit(units[len]);
+                }
+            }
+
+            var myTimer = new steer.SteerTimer(30);
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+                var delta = e.values.delta;
+                domain.preUpdate();
+                logicUpdate();
+                domain.update(delta);
+                domain.b2World.DrawDebugData();
+            });
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+            });
+            myTimer.start();
+
+        }
+
+
+
+    </script>
+
+</body>
+</html>

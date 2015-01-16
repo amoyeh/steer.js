@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Flocking</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene();">
+
+    <div id="mainView">
+        <div id="divScreen"></div>
+
+
+        <div id="controls">
+
+            <div class="rowUis">
+                <div class="uiSet" style="width: 280px;">
+                    <input type="range" class="uiRange" id="rangeSeparate" min="10" max="100" step="1" value="10" />
+                    <div class="uiRangeTxt" id="rangeSeparateTxt">Separation: 10</div>
+                </div>
+                <div class="uiSet" style="width: 280px;">
+                    <input type="range" class="uiRange" id="rangeCohesion" min="10" max="100" step="1" value="10" />
+                    <div class="uiRangeTxt" id="rangeCohesionTxt">Cohesion: 10</div>
+                </div>
+                <div class="uiSet" style="width: 280px;">
+                    <input type="range" class="uiRange" id="rangeAlignment" min="10" max="100" step="1" value="10" />
+                    <div class="uiRangeTxt" id="rangeAlignmentTxt">Alignment: 10</div>
+                </div>
+            </div>
+            <hr style="width:1000px; border:none; border-top: 1px solid #474747;" />
+            <div class="rowUis">
+                <div class="uiSet" style="width: 180px;">
+                    <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
+                </div>
+                <div class="uiSet" style="width: 400px;">
+                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
+                    <div id="rangeIntegrateTxt">20 FPS</div>
+                </div>
+            </div>
+        </div>
+
+
+        <canvas id="box2dDrawCanvas" width="1024" height="660" style="display:none;"></canvas>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function initScene() {
+
+            var gSeparation = 10, gAlignment = 10, gCohesion = 10;
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+            //domain 加入除錯顯示 Render
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+            //建立box2d除錯顯示物體資訊
+            domain.createBox2dDebugDraw("box2dDrawCanvas", box2d.b2DrawFlags.e_none | box2d.b2DrawFlags.e_shapeBit | box2d.b2DrawFlags.e_centerOfMassBit);
+
+            //建立 30 個 Unit 物件 並設定為隨機位置
+            var units = [];
+            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 10, maxSpeed: 25, dynamic: true, canCollide: false };
+            for (var t = 0; t < 30 ; t++) {
+                unitInfo.x = steer.MathUtil.range(50, 974);
+                unitInfo.y = steer.MathUtil.range(50, 610);
+                var newUnit = steer.item.Creator.createUnit(unitInfo);
+                //設定隨機速度
+                newUnit.velocity = steer.Vector.random(-10, 10, -10, 10);
+                //設定flocking range
+                newUnit.separateRadius = 10 / 30;
+                newUnit.alignRadius = 10 / 30;
+                newUnit.cohesionRadius = 10 / 30;
+                units.push(newUnit);
+                var ddInfo = steer.render.DebugDrawInfo.create(newUnit);
+                ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_ALIGNMENT | steer.render.DebugDrawInfo.UNIT_COHESION | steer.render.DebugDrawInfo.UNIT_SEPARATION;
+            }
+
+
+            // 建立 SteerTimer 設定更新頻率 20 FPS
+            var myTimer = new steer.SteerTimer(20);
+
+            //設定 每次運算時 LOGIC_UPDATE 時更新運算
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+
+                var delta = e.values.delta;
+                domain.preUpdate();
+                domain.box2dDebugDraw.m_ctx.clearRect(0, 0, 2000, 2000);
+
+                var k = units.length;
+                while (k--) {
+                    units[k].separateRadius = gSeparation / 30;
+                    units[k].alignRadius = gAlignment / 30;
+                    units[k].cohesionRadius = gCohesion / 30;
+                    var sepForce = steer.controls.Behavior.separation(units[k], units);
+                    var aliForce = steer.controls.Behavior.align(units[k], units);
+                    var cohForce = steer.controls.Behavior.cohesion(units[k], units);
+                    units[k].applyForce(sepForce);
+                    units[k].applyForce(aliForce);
+                    units[k].applyForce(cohForce);
+                }
+
+                //如果unit移動超過範圍，從另一端出現
+                var len = units.length;
+                while (len--) wrapUnit(units[len]); //in controlHelper.js
+                domain.update(delta);
+                domain.b2World.DrawDebugData();
+
+            });
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+            });
+            myTimer.start();
+
+
+            //UI 設定
+            document.getElementById("rangeSeparate").addEventListener("input", function (e) {
+                document.getElementById("rangeSeparateTxt").innerText = "Separation: " + e.target.value;
+                gSeparation = e.target.value;
+            });
+            document.getElementById("rangeCohesion").addEventListener("input", function (e) {
+                document.getElementById("rangeCohesionTxt").innerText = "Cohesion: " + e.target.value;
+                gCohesion = e.target.value;
+            });
+            document.getElementById("rangeAlignment").addEventListener("input", function (e) {
+                document.getElementById("rangeAlignmentTxt").innerText = "Alignment: " + e.target.value;
+                gAlignment = e.target.value;
+            });
+
+            generalControls(myTimer); //in controlHelper.js
+
+        }
+
+
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Gridmap Force Field</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+    <!-- perlin noise class for this demo only -->
+    <script src="perlin.js"></script>
+</head>
+<body onload="initScene();">
+
+    <div id="mainView" style=" height:660px; margin-top: -330px;">
+        <div id="divScreen" style="border-radius:4px;"></div>
+        <div id="steerLogo"></div>
+    </div>
+    <div style="position:absolute; left:50%; top:50%; z-index:100; margin-left:-512px; user-select:none; pointer-events:none; overflow:hidden;
+    margin-top:-300px; width:1024px; height:600px">
+        <canvas id="perlinCanvas" style="position:absolute; left:50%; top:50%; margin-left:-600px; user-select:none; pointer-events:none; opacity:0.1;
+    margin-top:-330px; width:1200px; height:660px; background:#333;" width="1200" height="660"></canvas>
+    </div>
+
+    <script type="text/javascript">
+
+        //點選或拖曳 時取得 mainView 滑鼠座標
+        var mousePt = { x: 0, y: 0 };
+        function mouseMoveCall(e) { mouseUpdate(e); }
+        document.addEventListener("mousedown", function (e) {
+            mouseUpdate(e);
+            document.addEventListener("mousemove", mouseMoveCall);
+        });
+        document.addEventListener("mouseup", function (e) { document.removeEventListener("mousemove", mouseMoveCall); });
+        document.addEventListener("touchstart", mouseUpdate);
+        document.addEventListener("touchmove", mouseUpdate);
+        function mouseUpdate(e) {
+            if (e.changedTouches) {
+                mousePt.x = (e.changedTouches[0].clientX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.changedTouches[0].clientY - document.getElementById("mainView").offsetTop) / 30;
+            } else if (e.pageX) {
+                mousePt.x = (e.pageX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.pageY - document.getElementById("mainView").offsetTop) / 30;
+            }
+            e.preventDefault();
+        }
+
+        function initScene() {
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 1024, 660);
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+
+            //建立 Gridmap
+            var blockSize = new steer.Vector(30, 30);
+            var cinfo = { x: 0, y: 0, gridSize: new steer.Vector(40, 30), blockSize: blockSize };
+            var gridMap = steer.item.Creator.createGridmap(cinfo);
+
+            //建立測試用 perlin noise 透過亮度決定方向
+            drawPerlinNoise();
+
+            //demo use perlin noise pixel brightness as the base to generate angle (white 360degree ~ black 0degree)
+            var vectorData = [];
+            for (var lx = 0; lx < cinfo.gridSize.x; lx++) {
+                vectorData.push([]);
+                for (var ly = 0; ly < cinfo.gridSize.y; ly++) {
+                    var tox = (lx * cinfo.blockSize.x) + cinfo.blockSize.x * .5;
+                    var toy = (ly * cinfo.blockSize.y) + cinfo.blockSize.y * .5;
+                    var angle = getPixelDir(tox, toy) * 360 * Math.PI / 180;
+                    vectorData[lx][ly] = steer.Vector.fromAngle(angle, 20);
+                }
+            }
+            gridMap.velocityData = vectorData;
+
+            //建立 30 個 Unit 物件 並設定為隨機位置
+            var units = [];
+            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 10, maxSpeed: 25, dynamic: true, canCollide: true };
+            for (var t = 0; t < 50; t++) {
+                unitInfo.x = steer.MathUtil.range(50, 974);
+                unitInfo.y = steer.MathUtil.range(50, 610);
+                var newUnit = steer.item.Creator.createUnit(unitInfo);
+                units.push(newUnit);
+            }
+
+
+            // 建立 SteerTimer 設定更新頻率 20 FPS
+            var myTimer = new steer.SteerTimer(20);
+
+            //設定 每次運算時 LOGIC_UPDATE 時更新運算 (此範例為每秒 20次)
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+
+                //delta 紀載 每次更新的時間差
+                var delta = e.values.delta;
+
+                //在更新任何動作前設定 domain.preUpdate() (目的為紀錄可能使用的參數，增加運算效能)
+                domain.preUpdate();
+
+                //如果unit移動超過範圍，從另一端出現
+                var len = units.length;
+                while (len--) {
+                    var gridForce = steer.controls.Behavior.gridmapForce(units[len], gridMap);
+                    units[len].applyForce(gridForce);
+                    var pos = units[len].getSteerPosition();
+                    if (pos.x < 0 || pos.x > 1024 || pos.y < 0 || pos.y > 660) {
+                        units[len].setSteerPosition(steer.MathUtil.range(50, 974), 0);
+                    }
+                }
+                //更新 domain 帶入每次更新的時間差，透過經過時間做為移動大小的依據
+                domain.update(delta);
+            });
+
+            //設定 畫面更新運算 RENDER_UPDATE (每秒 60次)
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+            });
+
+            //SteerTimer 開始運算
+            myTimer.start();
+
+        }
+
+        function drawPerlinNoise() {
+            var ctx = document.getElementById("perlinCanvas").getContext('2d');
+            var image = ctx.createImageData(1200, 660);
+            var data = image.data;
+            var height = 30;
+            var fn = 'simplex';
+            var start = Date.now();
+            // Cache width and height values for the canvas.
+            var cWidth = 1200;
+            var cHeight = 660;
+            var max = -Infinity, min = Infinity;
+            for (var x = 0; x < cWidth; x++) {
+                for (var y = 0; y < cHeight; y++) {
+                    var value = window["noise"].simplex3(x / 200, y / 200, height); //perlin size
+                    if (max < value) max = value;
+                    if (min > value) min = value;
+                    value = (1 + value) * 64; //light area
+                    var cell = (x + y * cWidth) * 4; //tile
+                    data[cell] = data[cell + 1] = data[cell + 2] = value;
+                    data[cell + 3] = 255; // alpha.
+                }
+            }
+            ctx.putImageData(image, 0, 0);
+        }
+
+        function getPixelDir(x, y) {
+            var ctx = document.getElementById("perlinCanvas").getContext('2d');
+            var p = ctx.getImageData(x, y, 1, 1).data;
+            var color = (p[0] << 16) + (p[1] << 8) + p[2];
+            return color / 0xFFFFFF;
+        }
+
+    </script>
+
+</body>
+</html>

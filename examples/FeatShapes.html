@@ -1,0 +1,173 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Shapes &amp; Avoidance</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene();">
+
+    <div id="mainView">
+
+        <div id="divScreen"></div>
+
+        <div id="controls">
+            <div class="rowUis">
+                <div class="uiSet" style="width:400px;">
+                    <input type="range" class="uiRange" id="rangeFrontRatio" min="0.1" max="3" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangeFrontRatioTxt">Raycast Front Ratio: 2</div>
+                </div>
+                <div class="uiSet">
+                    <input type="range" class="uiRange" id="rangeAvoidancePower" min="0.1" max="3" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangeAvoidancePowerTxt">Avoidance Power: 1</div>
+                </div>
+            </div>
+
+            <hr style="width:1000px; border:none; border-top: 1px solid #474747;" />
+            <div class="rowUis">
+                <div class="uiSet" style="width: 180px;">
+                    <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
+                </div>
+                <div class="uiSet" style="width: 400px;">
+                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
+                    <div id="rangeIntegrateTxt">20 FPS</div>
+                </div>
+            </div>
+
+        </div>
+        <canvas id="box2dDrawCanvas" width="1024" height="660" style="display:none;"></canvas>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        //點選或拖曳 時取得 mainView 滑鼠座標
+        var mousePt = { x: 0, y: 0 };
+        function mouseMoveCall(e) { mouseUpdate(e); }
+        document.getElementById("divScreen").addEventListener("mousedown", function (e) {
+            mouseUpdate(e);
+            document.addEventListener("mousemove", mouseMoveCall);
+        });
+        document.getElementById("divScreen").addEventListener("mouseup", function (e) { document.removeEventListener("mousemove", mouseMoveCall); });
+        document.getElementById("divScreen").addEventListener("touchstart", mouseUpdate);
+        document.getElementById("divScreen").addEventListener("touchmove", mouseUpdate);
+        function mouseUpdate(e) {
+            if (e.changedTouches) {
+                mousePt.x = (e.changedTouches[0].clientX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.changedTouches[0].clientY - document.getElementById("mainView").offsetTop) / 30;
+            } else if (e.pageX) {
+                mousePt.x = (e.pageX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.pageY - document.getElementById("mainView").offsetTop) / 30;
+            }
+        }
+
+        function initScene() {
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+            domain.createBox2dDebugDraw("box2dDrawCanvas", box2d.b2DrawFlags.e_none | box2d.b2DrawFlags.e_shapeBit | box2d.b2DrawFlags.e_centerOfMassBit);
+
+
+            //UI 變數
+            var avoidRatio = 1;
+
+            //建立方形圍牆 1024x660 pixel ， 10 pixel寬，寬度計算於 1024x660 pixel 內
+            var borderInfo = steer.CreateInfo = {
+                asPolygonBorder: true, polygonBorderInside: true, polygonBorderWidth: 10,
+                polygonBorderTL: new steer.Vector(0, 0), polygonBorderBR: new steer.Vector(1024, 660)
+            }
+            var borders = steer.item.Creator.createPolygonBorder(borderInfo);
+
+            //靜態矩形
+            var polygonInfo = { x: 150, y: 150, widthHalf: 60, heightHalf: 40, asBoxCenter: true, dynamic: false };
+            var polygon = steer.item.Creator.createPolygon(polygonInfo);
+            polygon.setBodyAngle(10);
+
+            //矩形 可被移動
+            polygon = steer.item.Creator.createPolygon({ x: 400, y: 150, widthHalf: 30, heightHalf: 40, asBoxCenter: true, dynamic: true });
+            polygon.setBodyAngle(135);
+
+            //圓形
+            steer.item.Creator.createCircle({ x: 600, y: 150, radius: 25, dynamic: false });
+
+            //圓形 可被移動
+            steer.item.Creator.createCircle({ x: 800, y: 150, radius: 35, dynamic: true });
+
+            //自訂形狀設定每個節點 ，需為 convex 凸狀圖形
+            steer.item.Creator.createPolygon({
+                x: 150, y: 300, asPolygon: true, vertices: [
+                    new steer.Vector(0, 0), new steer.Vector(100, -20), new steer.Vector(200, 50), new steer.Vector(140, 110),
+                    new steer.Vector(70, 130), new steer.Vector(20, 80)
+                ], dynamic: true
+            });
+
+            //邊界
+            steer.item.Creator.createEdge({
+                x: 600, y: 300, asEdge: true, vertices: [new steer.Vector(0, 0), new steer.Vector(250, -20),
+                    new steer.Vector(350, 150), new steer.Vector(220, 240), new steer.Vector(100, 200), new steer.Vector(140, 100)
+                ]
+            });
+
+            // unit 跟隨滑鼠
+            var newUnit = steer.item.Creator.createUnit({ x: 500, y: 500, radius: 15, maxForce: 10, maxSpeed: 40, dynamic: true });
+            newUnit.rayFrontRatio = 2;
+            var ddInfo = steer.render.DebugDrawInfo.create(newUnit);
+            ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+
+            var myTimer = new steer.SteerTimer(20);
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+
+                var delta = e.values.delta;
+                domain.preUpdate();
+                domain.box2dDebugDraw.m_ctx.clearRect(0, 0, 2000, 2000);
+
+                var seekForce = steer.controls.Behavior.seek(newUnit, mousePt);
+                newUnit.applyForce(seekForce);
+
+                var avoidForce = steer.controls.Behavior.avoidObstacle(newUnit);
+                newUnit.applyForce(avoidForce, avoidRatio);
+
+                domain.update(delta);
+                domain.b2World.DrawDebugData();
+
+            });
+
+            //設定 畫面更新運算 RENDER_UPDATE (每秒 60次)
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+                ////繪製座標 (只供範例顯示及除錯)
+                pixiDR.guideGrahpic.clear();
+                pixiDR.drawDot(mousePt, 0x66FF66, 0.8, 0.5);
+            });
+
+            myTimer.start();
+
+            generalControls(myTimer); //in controlHelper.js
+
+            document.getElementById("rangeAvoidancePower").addEventListener("input", function (e) {
+                avoidRatio = e.target.value;
+                document.getElementById("rangeAvoidancePowerTxt").innerText = "Avoidance Power: " + e.target.value;
+            });
+            document.getElementById("rangeFrontRatio").addEventListener("input", function (e) {
+                document.getElementById("rangeFrontRatioTxt").innerText = "Raycast Front Ratio: " + e.target.value;
+                newUnit.rayFrontRatio = e.target.value;
+            });
+
+        }
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,132 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Random</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene();">
+
+    <div id="mainView">
+        <div id="divScreen"></div>
+        <div id="controls">
+
+            <div class="rowUis">
+                <div class="uiSet" style="width:180px;">
+                    <div class="toggleTxt">Show Guide</div>
+                    <span id="sliderPath" class="checkbox"><input id="chGuide" type="checkbox" checked><label></label></span>
+                </div>
+                <div class="uiSet" style="width:300px;">
+                    <input type="range" class="uiRange" id="rangeWanderRadius" min="0.1" max="3" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangeWanderRadiusTxt">Wander Radius: 1</div>
+                </div>
+                <div class="uiSet">
+                    <input type="range" class="uiRange" id="rangeWanderRatio" min="5" max="90" step="5" value="20" />
+                    <div class="uiRangeTxt" id="rangeWanderRatioTxt">Degree Radio: 20</div>
+                </div>
+            </div>
+
+        </div>
+        <canvas id="box2dDrawCanvas" width="1024" height="660" style="display:none;"></canvas>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function runClassLoader() {
+            var loader = new steer.ClassLoader("../src/");
+            loader.load(function () {
+                initScene();
+            });
+        }
+
+        function initScene() {
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+            //domain 加入除錯顯示 Render
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+
+
+            //建立 20 個 Unit 物件 並設定為隨機位置
+            var units = [];
+            var unitInfo = { x: 0, y: 0, radius: 15, maxForce: 10, maxSpeed: 25, dynamic: true, canCollide: false };
+            for (var t = 0; t < 20 ; t++) {
+                unitInfo.x = steer.MathUtil.range(50, 974);
+                unitInfo.y = steer.MathUtil.range(50, 610);
+                var newUnit = steer.item.Creator.createUnit(unitInfo);
+                //unit 除錯顯示隨機移動
+                var ddinfo = steer.render.DebugDrawInfo.create(newUnit);
+                ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_WANDER;
+                units.push(newUnit);
+                //建立隨機移動參數 steer.controls.Behavior.initWander(物件, 物件前方隨機圓形大小 1 = 30 pixel, 物件每次髓機改變角度大小 degree)
+                steer.controls.Behavior.initWander(newUnit, 1, 20);
+            }
+
+
+            var myTimer = new steer.SteerTimer(30);
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+
+                var delta = e.values.delta;
+                domain.preUpdate();
+
+                //隨機移動更新
+                var len = units.length;
+                while (len--) {
+                    var wanderForce = steer.controls.Behavior.wander(units[len]);
+                    units[len].applyForce(wanderForce);
+                    wrapUnit(units[len]); // in controlHelper.js
+                }
+
+                domain.update(delta);
+                domain.b2World.DrawDebugData();
+
+            });
+
+            //設定 畫面更新運算 RENDER_UPDATE (每秒 60次)
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                //domain 中所有 Renderer 更新視覺
+                domain.integrate(e.values.delta);
+            });
+
+            myTimer.start();
+
+
+            //UI 控制
+            document.getElementById("chGuide").addEventListener("change", function (e) {
+                for (var t = 0; t < units.length; t++) {
+                    var ddinfo = steer.render.DebugDrawInfo.getInfo(units[t]);
+                    if (ddinfo) {
+                        if (document.getElementById("chGuide").checked) {
+                            ddinfo.drawMask |= steer.render.DebugDrawInfo.UNIT_WANDER;
+                        } else {
+                            ddinfo.drawMask &= ~steer.render.DebugDrawInfo.UNIT_WANDER;
+                        }
+                    }
+                }
+            });
+            document.getElementById("rangeWanderRadius").addEventListener("input", function (e) {
+                document.getElementById("rangeWanderRadiusTxt").innerText = "Wander Radius: " + e.target.value;
+                for (var t = 0; t < units.length; t++) units[t].wanderRadius = e.target.value;
+            });
+            document.getElementById("rangeWanderRatio").addEventListener("input", function (e) {
+                document.getElementById("rangeWanderRatioTxt").innerText = "Degree Radio: " + e.target.value;
+                for (var t = 0; t < units.length; t++) units[t].wanderRatioDeg = e.target.value * Math.PI / 180;;
+            });
+
+        }
+
+    </script>
+
+</body>
+</html>

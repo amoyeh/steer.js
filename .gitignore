@@ -1,0 +1,13 @@
+obj/
+*.pdb
+*.config
+*.dll
+bin/steer.combine.js
+steerjs_v2.csproj
+steerjs_v2.csproj.user
+steerjs_v2.sln
+steerjs_v2.v12.suo
+testbase/
+testpixi/
+testtj/
+TODO.txt

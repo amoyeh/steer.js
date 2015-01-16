@@ -1,0 +1,173 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Kart Demo</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+    <!--<script src="../src/ClassLoader.js"></script>-->
+</head>
+<body onload="initScene()">
+
+    <object id="svgObj" type="image/svg+xml" data="road.svg" style="opacity:0;"></object>
+    <div id="mainView">
+        <div style="position:absolute; left:0px; top:0px; width:1024px; height:660px; background:url('road.jpg'); opacity:1;"></div>
+        <div id="divScreen" style="z-index:20; background:none;"></div>
+        <div id="steerLogo" style="right:12px; top: 12px;"></div>
+        <div id="perTxt" style="position:absolute; left:20px; top:635px; font: 11px arial;"></div>
+        <div id="renderTxt" style="position:absolute; left:165px; top:635px; font: 11px arial;"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        var mouseUnit;
+
+        function initScene() {
+
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: false, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 1024, 660);
+            //domain.addRenderer(pixiDR);
+
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+
+            var loader = new PIXI.AssetLoader(["cart.json"]);
+            var koopaT = [], marioT = [], luigiT = [], PeachT = [], ToadT = [], TroopaT = [];
+            loader.onComplete = function () {
+
+                for (var i = 1; i < 23; i++) {
+                    var d = (i < 10) ? "0" : "";
+                    koopaT.push(PIXI.Texture.fromFrame("c" + d + i + ".png"));
+                    luigiT.push(PIXI.Texture.fromFrame("l" + d + i + ".png"));
+                    marioT.push(PIXI.Texture.fromFrame("m" + d + i + ".png"));
+                    PeachT.push(PIXI.Texture.fromFrame("p" + d + i + ".png"));
+                    ToadT.push(PIXI.Texture.fromFrame("r" + d + i + ".png"));
+                    TroopaT.push(PIXI.Texture.fromFrame("t" + d + i + ".png"));
+                }
+                var koopaM = new PIXI.MovieClip(koopaT);
+                var marioM = new PIXI.MovieClip(marioT);
+                var luigiM = new PIXI.MovieClip(luigiT);
+                var peachM = new PIXI.MovieClip(PeachT);
+                var toadM = new PIXI.MovieClip(ToadT);
+                var troopaM = new PIXI.MovieClip(TroopaT);
+
+                var movs = [koopaM, marioM, luigiM, peachM, toadM, troopaM];
+                movs.sort(function () { return .5 - Math.random(); });
+                for (var t = 0; t < movs.length; t++) {
+                    movs[t].anchor.x = .5;
+                    movs[t].anchor.y = .5;
+                    pixiStage.addChild(movs[t]);
+                }
+
+                //從指定 SVG Path Element 產生路徑
+                var svgPathElm = document.getElementById("svgObj").getSVGDocument().getElementById("roadPath");
+                var pathInfo = new steer.item.PathInfo(new steer.Vector(75, 85), 75, 10);
+                steer.item.PathInfo.fillSVGPathElement(svgPathElm, pathInfo);
+                var roadPath = steer.item.Creator.createPath({ pathInfo: pathInfo });
+                document.getElementById("svgObj").remove();
+
+                mouseUnit = steer.item.Creator.createUnit({ x: 10, y: 10, radius: 50, maxSpeed: 10, maxForce: 10, dynamic: true });
+
+                //建立 Unit
+                var createPos = [[150, 150], [300, 150], [500, 120], [700, 90], [920, 340], [600, 520]];
+                var carts = [];
+                for (var s = 0; s < createPos.length; s++) {
+                    var cart = steer.item.Creator.createUnit(
+                        {
+                            x: createPos[s][0], y: createPos[s][1], radius: 15,
+                            maxSpeed: 10 + (s * 5), maxForce: 5, dynamic: true
+                        });
+                    cart.pathVelocityRatio = 0.3;
+                    cart.pathOnFrontRatio = 0.3;
+                    steer.controls.Behavior.initPathUnit(cart, roadPath, true, true, 3);
+                    carts.push(cart);
+                    cart.data = movs[s];
+                }
+
+                var baseDR = new steer.BaseRender(domain, 1024, 660);
+                var imgPos = [];
+                for (var q = 5; q < 23; q++) imgPos.push(q);
+                for (var q = 1; q < 5; q++) imgPos.push(q);
+                //var imgPos = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 1, 2, 3, 4, 5,];
+                var oneDeg = 360 / 22;
+                var offsetDeg = 0.0174 * 10;
+                baseDR.updateObject = {
+                    "updateItem": function (item, xto, yto, rto, delta) {
+                        if (item.data) {
+                            item.data.position.x = xto * 30;
+                            item.data.position.y = yto * 30 - 10;
+                            var hd = (steer.MathUtil.degree(item.velocity.heading() + offsetDeg) + 180) % 360;
+                            //in pixi right 0 degree, down 90 degree , left 180 degree, top -90 degree,
+                            //adding 180 the result | left => 0 deg right => 180 deg, down => 270 deg
+                            var offset = Math.floor(hd / oneDeg);
+                            item.data.gotoAndStop(imgPos[offset]);
+                        }
+                    },
+                    "updateStep": function (delta) {
+                        pixiRenderer.render(pixiStage);
+                    }
+                }
+                domain.addRenderer(baseDR);
+
+
+                var myTimer = new steer.SteerTimer(30);
+                myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+                    var delta = e.values.delta;
+                    domain.preUpdate();
+                    var len = carts.length;
+                    while (len--) {
+                        carts[len].applyForce(steer.controls.Behavior.followPath(carts[len], roadPath));
+                    }
+                    domain.update(delta);
+                });
+                myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                    var now = performance.now();
+                    var delta = e.values.delta;
+                    domain.integrate(delta);
+                });
+                myTimer.start();
+            };//after asset loaded
+            loader.load();
+
+
+
+
+        }
+
+
+        //點選或拖曳 時取得 mainView 滑鼠座標
+
+        var mousePt = { x: 0, y: 0 };
+        function mouseMoveCall(e) { mouseUpdate(e); }
+        document.addEventListener("mousedown", function (e) {
+            mouseUpdate(e);
+            document.addEventListener("mousemove", mouseMoveCall);
+        });
+        document.addEventListener("mouseup", function (e) {
+            document.removeEventListener("mousemove", mouseMoveCall);
+        });
+        document.addEventListener("touchstart", mouseUpdate);
+        document.addEventListener("touchmove", mouseUpdate);
+        function mouseUpdate(e) {
+            if (e.changedTouches) {
+                mousePt.x = (e.changedTouches[0].clientX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.changedTouches[0].clientY - document.getElementById("mainView").offsetTop) / 30;
+            } else if (e.pageX) {
+                mousePt.x = (e.pageX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.pageY - document.getElementById("mainView").offsetTop) / 30;
+            }
+            if (mouseUnit) mouseUnit.setb2Position(mousePt.x, mousePt.y);
+            e.preventDefault();
+        }
+
+    </script>
+
+</body>
+</html>

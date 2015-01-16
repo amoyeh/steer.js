@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Basic Setup</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <!-- 載入 box2d, pixi and steer 依下列順序 -->
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene();">
+
+    <div id="mainView" style=" height:660px; margin-top: -330px;">
+        <div id="divScreen" style="border-radius:4px;"></div>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function initScene() {
+
+            //建立 pixi stage 與 renderer
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+
+            //建立 steer.js domain，domain 內將置放所有顯示及運算物件
+            var domain = new steer.Domain();
+            //建立 物理運算 box2d world
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+
+            //建立 steer.js pixi 除錯顯示物件
+            //所有除錯顯示的物件會製放至 pixiDR.container (動態建立的 PIXI.DisplayObjectContainer)
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+
+            //domain 加入除錯顯示 Renderer
+            domain.addRenderer(pixiDR);
+
+            //建立物件，使用 steer.item.Creator(static class)，設定建立至 domain
+            steer.item.Creator.setDomainReference(domain);
+
+            //box2d 使用 meters-kilogram-second (MKS) 做運算單位，
+            //換算至螢幕pixel時為 30 倍 (ex: box2d 半徑單位 1 的圓形在畫面顯示為半徑 30pixel)
+            //設定建立時使用 pixel 做為單位方便換算
+            steer.item.Creator.pixelCreateFormat = true;
+
+            //建立物件的參數createInfo，帶入建立Unit
+            var createInfo = { x: 200, y: 200, radius: 20, maxForce: 10, maxSpeed: 30, dynamic: true };
+            var newUnit = steer.item.Creator.createUnit(createInfo);
+
+            //顯示畫面 , domain 中所有 Renderer 更新視覺
+            domain.integrate(0);
+
+
+        }
+
+    </script>
+
+</body>
+</html>

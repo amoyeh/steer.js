@@ -1,0 +1,166 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Path &amp; Following</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+</head>
+<body onload="initScene();">
+
+    <div id="mainView">
+        <div id="divScreen"></div>
+        <div id="controls">
+            <div class="rowUis">
+                <div class="uiSet" style="width:160px;">
+                    <div class="toggleTxt">RayCast</div>
+                    <span id="sliderRaycast" class="checkbox"><input id="ckRayCast" type="checkbox"><label></label></span>
+                </div>
+                <div class="uiSet" style="width:160px;">
+                    <div class="toggleTxt">Show Path</div>
+                    <span id="sliderPath" class="checkbox"><input id="ckPath" type="checkbox"><label></label></span>
+                </div>
+                <div class="uiSet" style="width:350px;">
+                    <input type="range" class="uiRange" id="rangeVelocityAhead" min="0.1" max="3" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangeVelocityAheadTxt">Velocity Ahead Ratio: 1</div>
+                </div>
+                <div class="uiSet">
+                    <input type="range" class="uiRange" id="rangePathOnFront" min="0.1" max="3" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangePathOnFrontTxt">Path Front Ratio: 1</div>
+                </div>
+            </div>
+            <hr style="width:1000px; border:none; border-top: 1px solid #474747;" />
+            <div class="rowUis">
+                <div class="uiSet" style="width: 180px;">
+                    <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
+                </div>
+                <div class="uiSet" style="width: 400px;">
+                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
+                    <div id="rangeIntegrateTxt">20 FPS</div>
+                </div>
+            </div>
+
+        </div>
+        <canvas id="box2dDrawCanvas" width="1024" height="660" style="display:none;"></canvas>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function initScene() {
+
+            var gSeparation = 10, gAlignment = 10, gCohesion = 10;
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+            //建立 box2d 除錯顯示物體資訊
+            domain.createBox2dDebugDraw("box2dDrawCanvas", box2d.b2DrawFlags.e_none | box2d.b2DrawFlags.e_shapeBit | box2d.b2DrawFlags.e_centerOfMassBit);
+
+            //建立 Path 路徑
+            //設定建立參數 new steer.item.PathInfo(座標, 寬度, 貝茲取線節點數);
+            var pathInfo = new steer.item.PathInfo(new steer.Vector(100, 100), 50, 8);
+            //lineTo(目標x, 目標y);
+            pathInfo.lineTo(924, 100);
+            pathInfo.lineTo(924, 400);
+            //curveTo(控制結點1 x, 控制結點1 y, 控制結點2 x, 控制結點2 y, 目標x, 目標y);
+            pathInfo.curveTo(924, 600, 650, 600, 650, 400);
+            pathInfo.curveTo(650, 200, 376, 200, 376, 400);
+            pathInfo.curveTo(376, 600, 100, 600, 100, 400);
+            pathInfo.lineTo(100, 100);
+            path = steer.item.Creator.createPath({ pathInfo: pathInfo });
+
+            //建立Unit 跟隨路徑
+            var units = [];
+            var newUnit1 = steer.item.Creator.createUnit({ x: 512, y: 400, radius: 10, maxForce: 10, maxSpeed: 50, dynamic: true, canCollide: true });
+            newUnit1.pathVelocityRatio = 1;
+            newUnit1.pathOnFrontRatio = 1;
+            //設定跟隨路徑 初始參數
+            steer.controls.Behavior.initPathUnit(newUnit1, path, true, true, 1);
+            units.push(newUnit1);
+            var ddInfo = steer.render.DebugDrawInfo.create(newUnit1);
+            ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_PATH_INFO;
+
+            var newUnit2 = steer.item.Creator.createUnit({ x: 500, y: 100, radius: 15, maxForce: 10, maxSpeed: 30, dynamic: true, canCollide: true });
+            newUnit2.pathVelocityRatio = 1;
+            newUnit2.pathOnFrontRatio = 1;
+            steer.controls.Behavior.initPathUnit(newUnit2, path, true, true, 1);
+            units.push(newUnit2);
+            ddInfo = steer.render.DebugDrawInfo.create(newUnit2);
+            ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_PATH_INFO;
+
+            var myTimer = new steer.SteerTimer(20);
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+
+                var delta = e.values.delta;
+                domain.preUpdate();
+                domain.box2dDebugDraw.m_ctx.clearRect(0, 0, 2000, 2000);
+
+                var len = units.length;
+                while (len--) {
+                    units[len].applyForce(steer.controls.Behavior.followPath(units[len], path));
+                }
+
+                domain.update(delta);
+                domain.b2World.DrawDebugData();
+
+
+            });
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+            });
+            myTimer.start();
+
+            generalControls(myTimer, units); //in controlHelper.js
+
+
+            //UI 控制
+            document.getElementById("ckRayCast").addEventListener("change", function (e) {
+                for (var t = 0; t < units.length; t++) {
+                    var ddinfo = steer.render.DebugDrawInfo.getInfo(units[t]);
+                    if (ddinfo) {
+                        if (document.getElementById("ckRayCast").checked) {
+                            ddinfo.drawMask |= steer.render.DebugDrawInfo.UNIT_RAYCAST;
+                        } else {
+                            ddinfo.drawMask &= ~steer.render.DebugDrawInfo.UNIT_RAYCAST;
+                        }
+                    }
+                }
+            });
+            document.getElementById("ckPath").addEventListener("change", function (e) {
+                for (var t = 0; t < units.length; t++) {
+                    var ddinfo = steer.render.DebugDrawInfo.getInfo(units[t]);
+                    if (ddinfo) {
+                        if (document.getElementById("ckPath").checked) {
+                            ddinfo.drawMask |= steer.render.DebugDrawInfo.UNIT_PATH_INFO;
+                        } else {
+                            ddinfo.drawMask &= ~steer.render.DebugDrawInfo.UNIT_PATH_INFO;
+                        }
+                    }
+                }
+            });
+            document.getElementById("rangeVelocityAhead").addEventListener("input", function (e) {
+                document.getElementById("rangeVelocityAheadTxt").innerText = "Velocity Ahead Ratio: " + e.target.value;
+                for (var t = 0; t < units.length; t++) units[t].pathVelocityRatio = e.target.value;
+            });
+            document.getElementById("rangePathOnFront").addEventListener("input", function (e) {
+                document.getElementById("rangePathOnFrontTxt").innerText = "Path Front Ratio: " + e.target.value;
+                for (var t = 0; t < units.length; t++) units[t].pathOnFrontRatio = e.target.value;
+            });
+        }
+
+
+
+    </script>
+
+</body>
+</html>

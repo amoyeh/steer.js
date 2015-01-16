@@ -1,0 +1,270 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Gridmap Path finding</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script src="box2d.js"></script>
+    <script src="pixi.js"></script>
+    <script src="steer.min.js"></script>
+    <script src="controlHelper.js"></script>
+    <!-- pathfinding for this example -->
+    <script src="pathfinding.js"></script>
+</head>
+<body onload="initScene()">
+
+    <div id="mainView">
+        <div id="divScreen"></div>
+        <div id="controls">
+            <div class="rowUis">
+                <div class="uiSet" style="width: 150px;">
+                    <input type="button" id="btnSetStart" class="toggleBtn" value="Set Start Point" />
+                </div>
+                <div class="uiSet" style="width: 150px;">
+                    <input type="button" id="btnSetEnd" class="toggleBtn" value="Set End Point" />
+                </div>
+                <div class="uiSet" style="width: 150px;">
+                    <input type="button" id="btnSetWall" class="toggleBtn" value="Set Wall" />
+                </div>
+                <div class="uiSet" style="width: 150px;">
+                    <input type="button" id="btnEraseWall" class="toggleBtn" value="Earse Wall" />
+                </div>
+                <div class="uiSet" style="width: 150px;">
+                    <input type="button" id="btnClearWall" class="toggleBtn" value="Clear All Wall" />
+                </div>
+                <div class="uiSet" style="width: 200px;">
+                    <input type="button" id="btnRun" class="toggleBtn" value="Run" />
+                </div>
+            </div>
+            <hr style="width:1000px; border:none; border-top: 1px solid #474747;" />
+            <div class="rowUis">
+                <div class="uiSet" style="width:160px;">
+                    <div class="toggleTxt">Show Path</div>
+                    <span id="sliderPath" class="checkbox"><input id="ckPath" type="checkbox" checked><label></label></span>
+                </div>
+                <div class="uiSet" style="width:350px;">
+                    <input type="range" class="uiRange" id="rangeVelocityAhead" min="0.1" max="3" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangeVelocityAheadTxt">Velocity Ahead Ratio: 1</div>
+                </div>
+                <div class="uiSet">
+                    <input type="range" class="uiRange" id="rangePathOnFront" min="0.1" max="3" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangePathOnFrontTxt">Path Front Ratio: 1</div>
+                </div>
+            </div>
+
+        </div>
+        <canvas id="box2dDrawCanvas" width="1024" height="660" style="display:none;"></canvas>
+        <div id="steerLogo"></div>
+    </div>
+
+    <script type="text/javascript">
+
+        function initScene() {
+
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 1024, 660);
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
+            //建立 Gridmap
+            var blockSize = new steer.Vector(30, 30);
+            var cinfo = { x: 0, y: 0, gridSize: new steer.Vector(34, 22), blockSize: blockSize };
+            var gridMap = steer.item.Creator.createGridmap(cinfo);
+
+            //建立PathFinding Grid 並設定至 gridMap.pathData
+            var grid = new PF.Grid(cinfo.gridSize.x, cinfo.gridSize.y);
+            for (var lx = 0; lx < cinfo.gridSize.x; lx++) {
+                for (var ly = 0; ly < cinfo.gridSize.y; ly++) {
+                    grid.setWalkableAt(lx, ly, true);
+                }
+            }
+            gridMap.pathData = grid;
+
+            var unit1 = steer.item.Creator.createUnit({ x: 300, y: 100, radius: 10, maxForce: 10, maxSpeed: 30, dynamic: true, canCollide: true });
+            var unit2 = steer.item.Creator.createUnit({ x: 350, y: 100, radius: 20, maxForce: 10, maxSpeed: 30, dynamic: true, canCollide: true });
+            var units = [unit1, unit2];
+            for (var s = 0; s < units.length; s++) {
+                var ddinfo = steer.render.DebugDrawInfo.create(units[s]);
+                ddinfo.drawMask |= steer.render.DebugDrawInfo.UNIT_PATH_INFO;
+            }
+
+            //紀載最後更新路徑
+            var currentPath = null;
+
+            var myTimer = new steer.SteerTimer(20);
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+                var delta = e.values.delta;
+                domain.preUpdate();
+                if (currentPath) {
+                    for (var s = 0; s < units.length; s++) {
+                        units[s].applyForce(steer.controls.Behavior.followPath(units[s], currentPath));
+                    }
+                }
+                domain.update(delta);
+            });
+
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+                domain.integrate(e.values.delta);
+            });
+
+            myTimer.start();
+
+            ////////////////////////////////////////////////////////
+            //UI 控制
+            ///////////////////////////////////////////////////////
+            var state = 0; // 0 none, 1 start , 2 end, 3  set wall, 4 clear wall, 5 run
+            function setBtnClass() {
+                var btnList = ["btnSetStart", "btnSetEnd", "btnSetWall", "btnEraseWall", "btnClearWall", "btnRun"];
+                var onBtn = "";
+                if (state == 1) onBtn = "btnSetStart";
+                if (state == 2) onBtn = "btnSetEnd";
+                if (state == 3) onBtn = "btnSetWall";
+                if (state == 4) onBtn = "btnEraseWall";
+                if (state == 5) onBtn = "btnClearWall";
+                if (state == 6) onBtn = "btnRun";
+                for (var s = 0; s < btnList.length; s++) {
+                    document.getElementById(btnList[s]).className = (btnList[s] == onBtn) ? "toggleBtn toggleBtnOn" : "toggleBtn";
+                }
+            }
+            function startBtnDown() {
+                if (state == 1) {
+                    state = 0;
+                } else {
+                    state = 1;
+                }
+                setBtnClass();
+            }
+            function endBtnDown() {
+                if (state == 2) {
+                    state = 0;
+                } else {
+                    state = 2;
+                }
+                setBtnClass();
+            }
+            function wallBtnDown() {
+                if (state == 3) {
+                    state = 0;
+                } else {
+                    state = 3;
+                }
+                setBtnClass();
+            }
+            function wallEraseBtnDown() {
+                if (state == 4) {
+                    state = 0;
+                } else {
+                    state = 4;
+                }
+                setBtnClass();
+            }
+            function wallClearBtnDown() {
+                state = 0;
+                setBtnClass();
+                gridMap.clearPathGrid();
+                pixiDR.drawGridmap(gridMap);
+                //render directly
+                pixiDR.integrate(0);
+            }
+            function run() {
+                state = 0;
+                setBtnClass();
+                var pathInfo = gridMap.findPath(startPos.x, startPos.y, endPos.x, endPos.y, 50, 6);
+                if (currentPath) domain.remove(currentPath);
+                currentPath = steer.item.Creator.createPath({ pathInfo: pathInfo });
+                for (var s = 0; s < units.length; s++) {
+                    steer.controls.Behavior.initPathUnit(units[s], currentPath, false, false, 1);
+                }
+            }
+            var startPos = { x: 0, y: 0 };
+            var endPos = { x: 0, y: 0 };
+            var startG = new PIXI.Graphics();
+            var endG = new PIXI.Graphics();
+            pixiStage.addChild(startG);
+            pixiStage.addChild(endG);
+            pixiStage.mousedown = function (evt) {
+                var tox = Math.floor(evt.global.x / cinfo.blockSize.x);
+                var toy = Math.floor(evt.global.y / cinfo.blockSize.y);
+                switch (state) {
+                    case 1:
+                        if (grid.isWalkableAt(tox, toy)) {
+                            startG.clear();
+                            startG.beginFill(0x33CC33, 0.3);
+                            startG.drawCircle(tox * cinfo.blockSize.x + cinfo.blockSize.x * .5, toy * cinfo.blockSize.y + cinfo.blockSize.y * .5, 10);
+                            startG.endFill();
+                            startPos = { x: tox, y: toy };
+                        }
+                        break;
+                    case 2:
+                        if (grid.isWalkableAt(tox, toy)) {
+                            endG.clear();
+                            endG.beginFill(0xCC3333, 0.3);
+                            endG.drawCircle(tox * cinfo.blockSize.x + cinfo.blockSize.x * .5, toy * cinfo.blockSize.y + cinfo.blockSize.y * .5, 10);
+                            endG.endFill();
+                            endPos = { x: tox, y: toy };
+                        }
+                        break;
+                    case 3:
+                    case 4:
+                        mouseMoveModWall(evt);
+                        pixiStage.mousemove = mouseMoveModWall;
+                        break;
+                }
+            };
+            pixiStage.mouseup = function (evt) { pixiStage.mousemove = null; }
+            document.body.addEventListener("mouseup", function (evt) { pixiStage.mousemove = null; });
+            function mouseMoveModWall(evt) {
+                var tox = Math.floor(evt.global.x / cinfo.blockSize.x);
+                var toy = Math.floor(evt.global.y / cinfo.blockSize.y);
+                if (tox > -1 && toy > -1 && tox < cinfo.gridSize.x && toy < cinfo.gridSize.y) {
+                    if (state == 4) {
+                        grid.setWalkableAt(tox, toy, true);
+                    } else {
+                        grid.setWalkableAt(tox, toy, false);
+                    }
+                    pixiDR.drawGridmap(gridMap);
+                    //render graphic 
+                    pixiDR.integrate(0);
+                }
+            }
+            document.getElementById("btnSetStart").addEventListener("mousedown", startBtnDown);
+            document.getElementById("btnSetEnd").addEventListener("mousedown", endBtnDown);
+            document.getElementById("btnSetWall").addEventListener("mousedown", wallBtnDown);
+            document.getElementById("btnEraseWall").addEventListener("mousedown", wallEraseBtnDown);
+            document.getElementById("btnClearWall").addEventListener("mousedown", wallClearBtnDown);
+            document.getElementById("btnRun").addEventListener("mousedown", run);
+
+            //UI on Path
+            document.getElementById("ckPath").addEventListener("change", function (e) {
+                for (var t = 0; t < units.length; t++) {
+                    var ddinfo = steer.render.DebugDrawInfo.getInfo(units[t]);
+                    if (ddinfo) {
+                        if (document.getElementById("ckPath").checked) {
+                            ddinfo.drawMask |= steer.render.DebugDrawInfo.UNIT_PATH_INFO;
+                        } else {
+                            ddinfo.drawMask &= ~steer.render.DebugDrawInfo.UNIT_PATH_INFO;
+                        }
+                    }
+                }
+            });
+            document.getElementById("rangeVelocityAhead").addEventListener("input", function (e) {
+                document.getElementById("rangeVelocityAheadTxt").innerText = "Velocity Ahead Ratio: " + e.target.value;
+                for (var t = 0; t < units.length; t++) units[t].pathVelocityRatio = e.target.value;
+            });
+            document.getElementById("rangePathOnFront").addEventListener("input", function (e) {
+                document.getElementById("rangePathOnFrontTxt").innerText = "Path Front Ratio: " + e.target.value;
+                for (var t = 0; t < units.length; t++) units[t].pathOnFrontRatio = e.target.value;
+            });
+
+        }
+
+
+    </script>
+
+</body>
+
+</html>
