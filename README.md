@@ -9,7 +9,7 @@ It supports various moving behaviors that makes objects moving intelligently, an
 
 <a target="_blank" style="border-bottom:1px dotted;" href="http://www.codelab.tw/steerjs/example/">examples online</a>
 
-<a target="_blank" style="border-bottom:1px dotted;" href="http://www.codelab.tw/steerjs/doc/">documentations</a>
+<a target="_blank" style="border-bottom:1px dotted;" href="http://www.codelab.tw/steerjs/doc/">documentation</a>
 
 <br/>
 ## initial update
