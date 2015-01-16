@@ -1,4 +1,5 @@
 steer.js
+<<<<<<< HEAD
 ==========================================================================
 
 An open source steering behavior library for javascript. 
@@ -17,3 +18,8 @@ It supports various moving behaviors that makes objects moving intelligently, an
 the initial update
 ==========================================================================
 this documentaion page is still in very early release, please download the project from github and starts from the example provided.
+=======
+========
+
+javascript steering behavior library for three.js
+>>>>>>> bf572ce401b51ae3ff3ac3cdbef7ba735848233d
