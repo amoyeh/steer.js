@@ -5,12 +5,12 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <script src="steer.min.js"></script>
-    <script src="controlHelper.js"></script>
-    <!-- perlin noise class for this demo only -->
     <script src="perlin.js"></script>
+    <!--<script src="steer.min.js"></script>-->
+    <script src="controlHelper.js"></script>
+    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="initScene();">
+<body onload="runClassLoader();">
 
     <div id="mainView" style=" height:660px; margin-top: -330px;">
         <div id="divScreen" style="border-radius:4px;"></div>
@@ -81,7 +81,7 @@
 
             //建立 30 個 Unit 物件 並設定為隨機位置
             var units = [];
-            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 10, maxSpeed: 25, dynamic: true, canCollide: true };
+            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 2, maxSpeed: 10, dynamic: true, canCollide: true };
             for (var t = 0; t < 50; t++) {
                 unitInfo.x = steer.MathUtil.range(50, 974);
                 unitInfo.y = steer.MathUtil.range(50, 610);
@@ -91,7 +91,7 @@
 
 
             // 建立 SteerTimer 設定更新頻率 20 FPS
-            var myTimer = new steer.SteerTimer(20);
+            var myTimer = new steer.SteerTimer(60);
 
             //設定 每次運算時 LOGIC_UPDATE 時更新運算 (此範例為每秒 20次)
             myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {

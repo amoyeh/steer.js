@@ -5,10 +5,11 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <script src="steer.min.js"></script>
+    <!--<script src="steer.min.js"></script>-->
     <script src="controlHelper.js"></script>
+    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="initScene();">
+<body onload="runClassLoader();">
 
     <div id="mainView">
         <div id="divScreen"></div>
@@ -17,21 +18,30 @@
         <div id="controls">
 
             <div class="rowUis">
-                <div class="uiSet" style="width: 280px;">
-                    <input type="range" class="uiRange" id="rangeSeparate" min="10" max="100" step="1" value="10" />
-                    <div class="uiRangeTxt" id="rangeSeparateTxt">Separation: 10</div>
+                <div class="uiSet" style="width: 155px;">
+                    <input type="range" class="uiRange" id="rangeSeparate" min="5" max="100" step="1" value="5" />
+                    <div class="uiRangeTxtSmall" id="rangeSeparateTxt">Separation | force : 5 | 0.05</div>
                 </div>
-                <div class="uiSet" style="width: 280px;">
-                    <input type="range" class="uiRange" id="rangeCohesion" min="10" max="100" step="1" value="10" />
-                    <div class="uiRangeTxt" id="rangeCohesionTxt">Cohesion: 10</div>
+                <div class="uiSet" style="width: 170px;">
+                    <input type="range" class="uiRange" id="rangeSeparateF" min="0.05" max="1" step="0.05" value="0.05" />
                 </div>
-                <div class="uiSet" style="width: 280px;">
-                    <input type="range" class="uiRange" id="rangeAlignment" min="10" max="100" step="1" value="10" />
-                    <div class="uiRangeTxt" id="rangeAlignmentTxt">Alignment: 10</div>
+                <div class="uiSet" style="width: 155px;">
+                    <input type="range" class="uiRange" id="rangeCohesion" min="5" max="100" step="1" value="5" />
+                    <div class="uiRangeTxtSmall" id="rangeCohesionTxt">Cohesion | force : 5 | 0.05</div>
+                </div>
+                <div class="uiSet" style="width: 170px;">
+                    <input type="range" class="uiRange" id="rangeCohesionF" min="0.05" max="1" step="0.05" value="0.05" />
+                </div>
+                <div class="uiSet" style="width: 155px;">
+                    <input type="range" class="uiRange" id="rangeAlignment" min="5" max="100" step="1" value="5" />
+                    <div class="uiRangeTxtSmall" id="rangeAlignmentTxt">Alignment | force : 5 | 0.05</div>
+                </div>
+                <div class="uiSet" style="width: 170px;">
+                    <input type="range" class="uiRange" id="rangeAlignmentF" min="0.05" max="1" step="0.05" value="0.05" />
                 </div>
             </div>
-            <hr style="width:1000px; border:none; border-top: 1px solid #474747;" />
-            <div class="rowUis">
+            <hr style="width:1000px; border:none; border-top: 1px solid #474747; position:relative; top:15px;" />
+            <div class="rowUis" style="padding-top:25px;">
                 <div class="uiSet" style="width: 180px;">
                     <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
                 </div>
@@ -51,7 +61,8 @@
 
         function initScene() {
 
-            var gSeparation = 10, gAlignment = 10, gCohesion = 10;
+            var gSeparation = 1, gAlignment = 1, gCohesion = 1;
+            var gSeparationF = 0.05, gAlignmentF = 0.05, gCohesionF = 0.05;
 
             //建立 pixi 環境， domain 以及 Creator 指定 Domain
             var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
@@ -69,7 +80,8 @@
 
             //建立 30 個 Unit 物件 並設定為隨機位置
             var units = [];
-            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 10, maxSpeed: 25, dynamic: true, canCollide: false };
+            //maxForce == maxSpeed 此範例忽略maxForce 設定
+            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 7, maxSpeed: 7, dynamic: true, canCollide: true };
             for (var t = 0; t < 30 ; t++) {
                 unitInfo.x = steer.MathUtil.range(50, 974);
                 unitInfo.y = steer.MathUtil.range(50, 610);
@@ -86,8 +98,8 @@
             }
 
 
-            // 建立 SteerTimer 設定更新頻率 20 FPS
-            var myTimer = new steer.SteerTimer(20);
+            // 建立 SteerTimer 設定更新頻率 30 FPS
+            var myTimer = new steer.SteerTimer(30);
 
             //設定 每次運算時 LOGIC_UPDATE 時更新運算
             myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
@@ -104,9 +116,9 @@
                     var sepForce = steer.controls.Behavior.separation(units[k], units);
                     var aliForce = steer.controls.Behavior.align(units[k], units);
                     var cohForce = steer.controls.Behavior.cohesion(units[k], units);
-                    units[k].applyForce(sepForce);
-                    units[k].applyForce(aliForce);
-                    units[k].applyForce(cohForce);
+                    units[k].applyForce(sepForce, gSeparationF);
+                    units[k].applyForce(aliForce, gAlignmentF);
+                    units[k].applyForce(cohForce, gCohesionF);
                 }
 
                 //如果unit移動超過範圍，從另一端出現
@@ -124,18 +136,31 @@
 
             //UI 設定
             document.getElementById("rangeSeparate").addEventListener("input", function (e) {
-                document.getElementById("rangeSeparateTxt").innerText = "Separation: " + e.target.value;
                 gSeparation = e.target.value;
+                document.getElementById("rangeSeparateTxt").innerText = "Separation | force : " + gSeparation + " | " + gSeparationF;
             });
-            document.getElementById("rangeCohesion").addEventListener("input", function (e) {
-                document.getElementById("rangeCohesionTxt").innerText = "Cohesion: " + e.target.value;
-                gCohesion = e.target.value;
-            });
-            document.getElementById("rangeAlignment").addEventListener("input", function (e) {
-                document.getElementById("rangeAlignmentTxt").innerText = "Alignment: " + e.target.value;
-                gAlignment = e.target.value;
+            document.getElementById("rangeSeparateF").addEventListener("input", function (e) {
+                gSeparationF = e.target.value;
+                document.getElementById("rangeSeparateTxt").innerText = "Separation | force : " + gSeparation + " | " + gSeparationF;
             });
 
+            document.getElementById("rangeCohesion").addEventListener("input", function (e) {
+                gCohesion = e.target.value;
+                document.getElementById("rangeCohesionTxt").innerText = "Cohesion | force : " + gCohesion + " | " + gCohesionF;
+            });
+            document.getElementById("rangeCohesionF").addEventListener("input", function (e) {
+                gCohesionF = e.target.value;
+                document.getElementById("rangeCohesionTxt").innerText = "Cohesion | force : " + gCohesion + " | " + gCohesionF;
+            });
+
+            document.getElementById("rangeAlignment").addEventListener("input", function (e) {
+                gAlignment = e.target.value;
+                document.getElementById("rangeAlignmentTxt").innerText = "Alignment | force : " + gCohesion + " | " + gCohesionF;
+            });
+            document.getElementById("rangeAlignmentF").addEventListener("input", function (e) {
+                gAlignmentF = e.target.value;
+                document.getElementById("rangeAlignmentTxt").innerText = "Alignment | force : " + gCohesion + " | " + gCohesionF;
+            });
             generalControls(myTimer); //in controlHelper.js
 
         }

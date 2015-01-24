@@ -6,8 +6,8 @@
         public static DC_PATH_FILL_SA: number = 0.4;
         public static DC_PATH_FILL_A: number = 0.1;
         public static DC_PATH_GUIDE: number = 0x33FFFF;
-        public static DC_PATH_GUIDE_A: number = 0.2;
-        public static DC_PATH_GUIDE_A2: number = 0.05;
+        public static DC_PATH_GUIDE_A: number = 0.3;
+        public static DC_PATH_GUIDE_A2: number = 0.2;
 
         public static DC_WANDER: number = 0x969696;
         public static DC_WANDER_A: number = 0.5;

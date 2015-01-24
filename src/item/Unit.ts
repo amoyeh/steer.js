@@ -37,27 +37,36 @@
 
         //for raycasting
         public currentRayFront: number;
-        public rayFrontRatio: number = 2;
+        public rayFrontRatio: number = 4;
 
         //see if this unit can collide with other units
         public canCollide: boolean = true;
 
         /** cache value for update uses */
+        public c_averageVelocity: Vector;
         public c_velocityLength: number;
         public c_rayInfo: Vector[];
 
+        public mass: number = 1;
         public data: any;
+
+        private oldVelocities: Vector[];
+
+        public avoidInfo: any;
 
         constructor(b2Body: box2d.b2Body, radius: number, maxSpeed: number = 10, maxForce: number = 1, name?: string) {
 
             super(b2Body, radius, name);
             this.maxSpeed = maxSpeed;
+            //this.mass = this.maxSpeed * 30; //box2d 30 times bigger
             this.maxForce = maxForce;
             this.velocity = new Vector(0, 0);
             this.acceleration = new Vector(0, 0);
             this.diffPosition = new box2d.b2Vec2(0, 0);
+            this.c_averageVelocity = new Vector();
             this.separateRadius = this.radius + Unit.UnitSperateGap;
             this.cohesionRadius = this.alignRadius = this.radius;
+            this.oldVelocities = [];
 
         }
 
@@ -66,32 +75,58 @@
             this.acceleration.add(force);
         }
 
+        public addAverageData(newOne: steer.Vector): void {
+            if (this.oldVelocities.length > 2) this.oldVelocities.shift();
+            this.oldVelocities.push(newOne);
+        }
+
+        public averageVelocity(): Vector {
+            //var len: number = this.oldVelocities.length;
+            //if (len == 0) return new Vector();
+            //var accumulated: Vector = new Vector();
+            //for (var s: number = 0; s < len; s++) {
+            //    accumulated.add(this.oldVelocities[s]);
+            //}
+            //return accumulated.div(len);
+            //return this.c_averageVelocity;
+            return this.velocity.clone();
+        }
+
         public update(delta: number): void {
             if (!this.dynamic) {
                 this.velocity.setTo(0, 0);
                 this.acceleration.setTo(0, 0);
                 return;
             }
-
-            delta *= 0.01;
             /*
-                Euler’s method implementation
+            improved Euler’s method implementation, store 4 average velocities and caculate its average
             -------------------------------------------------------------------
-                velocity += acceleration * time_step;
-                position += velocity * time_step
+                applyForce() -> acceleration caculated then ...
+                acceleration /= mass;
+                velocity += acceleration * timeDelta;
+                velocity limit to max speed
+                store current velocity to array oldVelocities max 4
+                averageVelocity = oldVelocities get average
+                position += averageVelocity * timeDelta;
             */
-            this.acceleration.mult(delta);
-            this.velocity.add(this.acceleration);
-            this.velocity.limit(this.maxSpeed);
-            var deltaVelocity: steer.Vector = this.velocity.clone().mult(delta);
-            deltaVelocity.limit(this.maxSpeed);
-            //multiply 30 to get box2d relative speed in pixel
-            deltaVelocity.mult(30);
+            //div30 to fit box2d space
+            //this.acceleration.mult(delta);
+            //this.velocity.add(this.acceleration).limit(this.maxSpeed);
+            //this.addVelocityData(this.velocity.clone());
+            //var averageVelocity: Vector = this.averageVelocity();
+            //this.b2body.SetAwake(true);
+            //this.b2body.SetLinearVelocity(averageVelocity.mult(delta).makeB2Vec());
+            //this.acceleration.setTo(0, 0);
+
+            //method. 2 velocities average
+            this.acceleration.div(this.mass).mult(delta);
+            var oldVelocity: Vector = this.velocity.clone();
+            this.addAverageData(this.velocity.clone());
+            this.velocity.add(this.acceleration).limit(this.maxSpeed);
+            var averageVelocity: Vector = this.velocity.clone().add(oldVelocity).div(2);
             this.b2body.SetAwake(true);
-            //this.b2body.SetLinearVelocity(deltaVelocity);
-            this.b2body.SetLinearVelocity(deltaVelocity.makeB2Vec());
+            this.b2body.SetLinearVelocity(averageVelocity.mult(delta).makeB2Vec());
             this.acceleration.setTo(0, 0);
-            //-------------------------------------------------------------------
         }
 
         private getRaycast(useGlobal: boolean = false): Vector[] {
@@ -99,12 +134,13 @@
             var result: Vector[] = [];
             var atx: number = this.getb2X();
             var aty: number = this.getb2Y();
-            var heading: number = this.velocity.heading();
+            var avgVelocity = this.averageVelocity();
+            var heading: number = avgVelocity.heading();
             var velocityLength: number = this.c_velocityLength;
 
             //angle between 5 ~ 30, base on unit current speed, 
             var baseAngle: number = 0;
-            var speedRatio: number = (1 - this.velocity.mag() / this.maxSpeed) * 25;
+            var speedRatio: number = (1 - avgVelocity.mag() / this.maxSpeed) * 25;
             baseAngle = Math.round(speedRatio + 5);
 
             //angle adding one, first one attach on the side
@@ -167,23 +203,21 @@
 
         /** cache caculated informations, saving time to caculate again and again when use these values in each update */
         public prepareUpdateCache(): void {
-            this.currentRayFront = (this.velocity.mag() * this.rayFrontRatio + this.separateRadius);
+            var avgVelocity: Vector = this.averageVelocity();
+            this.currentRayFront = (avgVelocity.mag() * this.rayFrontRatio + this.separateRadius);
             var minLength: number = this.separateRadius;
             var velocityLength: number = this.currentRayFront;
             if (velocityLength < minLength) velocityLength = minLength;
             this.c_velocityLength = velocityLength;
             this.c_rayInfo = this.getRaycast(true);
+            this.avoidInfo = {};
         }
-
 
         public setb2Position(x: number, y: number): void {
             //if (!this.dynamic) console.error("setb2Position on static item : " + this.name);
             this.b2body.SetPosition(new box2d.b2Vec2(x, y));
         }
         public setSteerPosition(x: number, y: number): void {
-            //this.velocity.setTo(0, 0);
-            //this.acceleration.setTo(0, 0);
-            //this.b2body.SetLinearVelocity(new box2d.b2Vec2(0, 0));
             this.b2body.SetPosition(new box2d.b2Vec2(x / 30, y / 30));
         }
 
@@ -204,7 +238,8 @@
                 var lowerV: box2d.b2Vec2 = new box2d.b2Vec2(this.getb2X() - maxRadius, this.getb2Y() - maxRadius);
                 var upperV: box2d.b2Vec2 = new box2d.b2Vec2(this.getb2X() + maxRadius, this.getb2Y() + maxRadius);
                 bodyAABB.Combine1({ lowerBound: lowerV, upperBound: upperV });
-                if (this.velocity.mag() > 0) {
+                //this.averageVelocity().mag
+                if (this.averageVelocity().mag() > 0) {
                     for (var s: number = 0; s < rayInfo.length; s += 2) {
                         bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
                         bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
@@ -220,6 +255,7 @@
         }
 
         public resetVelocity(): void {
+            this.oldVelocities = [];
             this.velocity.setTo(0, 0);
             this.acceleration.setTo(0, 0);
             this.b2body.SetLinearVelocity(new box2d.b2Vec2(0, 0));

@@ -5,10 +5,11 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <script src="steer.min.js"></script>
+    <!--<script src="steer.min.js"></script>-->
     <script src="controlHelper.js"></script>
+    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="initScene();">
+<body onload="runClassLoader();">
 
     <div id="mainView">
         <div id="divScreen"></div>
@@ -18,7 +19,7 @@
                     <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
                 </div>
                 <div class="uiSet" style="width: 400px;">
-                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
+                    <input type="range" id="rangeIntegrate" min="5" max="60" step="1" value="20" />
                     <div id="rangeIntegrateTxt">20 FPS</div>
                 </div>
             </div> 
@@ -47,7 +48,7 @@
 
             //建立 20 個 Unit 物件 並設定為隨機位置
             var units = [];
-            var unitInfo = { x: 0, y: 0, radius: 15, maxForce: 10, maxSpeed: 25, dynamic: true, canCollide: false };
+            var unitInfo = { x: 0, y: 0, radius: 15, maxForce: 1, maxSpeed: 10, dynamic: true, canCollide: false };
             for (var t = 0; t < 20 ; t++) {
                 unitInfo.x = steer.MathUtil.range(50, 974);
                 unitInfo.y = steer.MathUtil.range(50, 610);

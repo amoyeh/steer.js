@@ -167,11 +167,13 @@ var steer;
                 g.lineStyle(0.03, render.DebugColors.DC_RAYCAST, render.DebugColors.DC_RAYCAST_A);
                 if (ddinfo.drawMask & render.DebugDrawInfo.UNIT_RAYCAST) {
                     var rayPts = item.c_rayInfo;
-                    for (var s = 0; s < rayPts.length; s += 2) {
-                        var ix = item.getb2X();
-                        var iy = item.getb2Y();
-                        g.moveTo(rayPts[s].x - ix - 0.5, rayPts[s].y - iy - 0.5);
-                        g.lineTo(rayPts[s + 1].x - ix - 0.5, rayPts[s + 1].y - iy - 0.5);
+                    if (item.c_velocityLength > 0.7) {
+                        for (var s = 0; s < rayPts.length; s += 2) {
+                            var ix = item.getb2X();
+                            var iy = item.getb2Y();
+                            g.moveTo(rayPts[s].x - ix - 0.5, rayPts[s].y - iy - 0.5);
+                            g.lineTo(rayPts[s + 1].x - ix - 0.5, rayPts[s + 1].y - iy - 0.5);
+                        }
                     }
                 }
                 if (ddinfo.drawMask & render.DebugDrawInfo.UNIT_SEPARATION) {
@@ -200,14 +202,14 @@ var steer;
                 }
                 if (ddinfo.drawMask & render.DebugDrawInfo.UNIT_PATH_INFO) {
                     if (ddinfo.pathPredict) {
-                        g.lineStyle(0.03, render.DebugColors.DC_PATH_GUIDE, render.DebugColors.DC_PATH_GUIDE_A);
+                        g.lineStyle(0.05, render.DebugColors.DC_PATH_GUIDE, render.DebugColors.DC_PATH_GUIDE_A);
                         g.drawCircle(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5, 0.05);
                         g.drawCircle(ddinfo.pathNormal.x - .5, ddinfo.pathNormal.y - .5, 0.05);
                         g.moveTo(-.5, -.5);
                         g.lineTo(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5);
                         g.lineTo(ddinfo.pathNormal.x - .5, ddinfo.pathNormal.y - .5);
-                        g.moveTo(-.5, -.5);
-                        g.lineStyle(0.15, render.DebugColors.DC_PATH_GUIDE, render.DebugColors.DC_PATH_GUIDE_A2);
+                        g.drawCircle(ddinfo.pathOnFront.x - .5, ddinfo.pathOnFront.y - .5, 0.1);
+                        g.moveTo(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5);
                         g.lineTo(ddinfo.pathOnFront.x - .5, ddinfo.pathOnFront.y - .5);
                     }
                 }

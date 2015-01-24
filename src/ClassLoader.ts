@@ -48,14 +48,16 @@
                 "render/DebugDrawInfo.js",
                 "render/PixiDebugRenderer.js",
  
-                //js only file, concat these in grunt build 
-                "ClassTool.js", 
-                "DebugDraw.js",
-
+                
                 //external
                 "pathfinding.js",
                 "three.min.js",
-                "box2d.js"
+                "box2d.js",
+
+                //js only file, concat these in grunt build 
+                "ClassTool.js",
+                "DebugDraw.js"
+
 
             ];
 

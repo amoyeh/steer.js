@@ -5,10 +5,11 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <script src="steer.min.js"></script>
+    <!--<script src="steer.min.js"></script>-->
     <script src="controlHelper.js"></script>
+    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="initScene();">
+<body onload="runClassLoader();">
 
     <div id="mainView" style=" height:660px; margin-top: -330px;">
         <div id="divScreen" style="border-radius:4px;"></div>
@@ -18,114 +19,117 @@
     <script type="text/javascript">
 
 
-    //點選或拖曳 時取得 mainView 滑鼠座標
-    var mousePt = { x: 0, y: 0 };
-    function mouseMoveCall(e) { mouseUpdate(e); }
-    document.addEventListener("mousedown", function (e) {
-        mouseUpdate(e);
-        document.addEventListener("mousemove", mouseMoveCall);
-    });
-    document.addEventListener("mouseup", function (e) { document.removeEventListener("mousemove", mouseMoveCall); });
-    document.addEventListener("touchstart", mouseUpdate);
-    document.addEventListener("touchmove", mouseUpdate);
-    function mouseUpdate(e) {
-        if (e.changedTouches) {
-            mousePt.x = (e.changedTouches[0].clientX - document.getElementById("mainView").offsetLeft) / 30;
-            mousePt.y = (e.changedTouches[0].clientY - document.getElementById("mainView").offsetTop) / 30;
-        } else if (e.pageX) {
-            mousePt.x = (e.pageX - document.getElementById("mainView").offsetLeft) / 30;
-            mousePt.y = (e.pageY - document.getElementById("mainView").offsetTop) / 30;
+        //點選或拖曳 時取得 mainView 滑鼠座標
+        var mousePt = { x: 0, y: 0 };
+        function mouseMoveCall(e) { mouseUpdate(e); }
+        document.addEventListener("mousedown", function (e) {
+            mouseUpdate(e);
+            document.addEventListener("mousemove", mouseMoveCall);
+        });
+        document.addEventListener("mouseup", function (e) { document.removeEventListener("mousemove", mouseMoveCall); });
+        document.addEventListener("touchstart", mouseUpdate);
+        document.addEventListener("touchmove", mouseUpdate);
+        function mouseUpdate(e) {
+            if (e.changedTouches) {
+                mousePt.x = (e.changedTouches[0].clientX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.changedTouches[0].clientY - document.getElementById("mainView").offsetTop) / 30;
+            } else if (e.pageX) {
+                mousePt.x = (e.pageX - document.getElementById("mainView").offsetLeft) / 30;
+                mousePt.y = (e.pageY - document.getElementById("mainView").offsetTop) / 30;
+            }
+            e.preventDefault();
         }
-        e.preventDefault();
-    }
 
-    function initScene() {
+        function initScene() {
 
-        //建立 pixi 環境， domain 以及 Creator 指定 Domain
-        var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
-        document.getElementById("divScreen").appendChild(pixiRenderer.view);
-        var pixiStage = new PIXI.Stage(0xFFFFFF, false);
-        var domain = new steer.Domain();
-        domain.createB2World(new box2d.b2Vec2(0, 0));
-        var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
-        //domain 加入除錯顯示 Render
-        domain.addRenderer(pixiDR);
-        steer.item.Creator.setDomainReference(domain);
-        steer.item.Creator.pixelCreateFormat = true;
+            //建立 pixi 環境， domain 以及 Creator 指定 Domain
+            var pixiRenderer = PIXI.autoDetectRenderer(1024, 660, { antialias: true, transparent: true, resolution: 1 });
+            document.getElementById("divScreen").appendChild(pixiRenderer.view);
+            var pixiStage = new PIXI.Stage(0xFFFFFF, false);
+            var domain = new steer.Domain();
+            domain.createB2World(new box2d.b2Vec2(0, 0));
+            var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 900, 700);
+            //domain 加入除錯顯示 Render
+            domain.addRenderer(pixiDR);
+            steer.item.Creator.setDomainReference(domain);
+            steer.item.Creator.pixelCreateFormat = true;
 
-        //mouseUnit 跟隨點選位置，canCollide參數 false, Unit不會互相碰撞
-        var createInfo = { x: 200, y: 200, radius: 15, maxForce: 10, maxSpeed: 30, dynamic: true, canCollide: false };
-        var mouseUnit = steer.item.Creator.createUnit(createInfo);
+            //mouseUnit 跟隨點選位置，canCollide參數 false, Unit不會互相碰撞
+            var createInfo = { x: 200, y: 200, radius: 15, maxForce: 10, maxSpeed: 30, dynamic: true, canCollide: false };
+            var mouseUnit = steer.item.Creator.createUnit(createInfo);
 
-        //fleeUnit 躲避 mouseUnit 座標
-        var fleeUnit = steer.item.Creator.createUnit({ x: 100, y: 100, radius: 10, maxForce: 10, maxSpeed: 10, dynamic: true, canCollide: false });
+            //fleeUnit 躲避 mouseUnit 座標
+            var fleeUnit = steer.item.Creator.createUnit({ x: 100, y: 100, radius: 10, maxForce: 0.5, maxSpeed: 10, dynamic: true, canCollide: false });
 
-        //evadeUnit 躲避 mouseUnit 將來座標
-        var evadeUnit = steer.item.Creator.createUnit({ x: 80, y: 80, radius: 10, maxForce: 10, maxSpeed: 10, dynamic: true, canCollide: false });
+            //evadeUnit 躲避 mouseUnit 將來座標
+            var evadeUnit = steer.item.Creator.createUnit({ x: 80, y: 80, radius: 10, maxForce: 0.5, maxSpeed: 10, dynamic: true, canCollide: false });
 
-        //unit 除錯顯示設定, mouse Unit 紅色, fleeUnit 藍色, evadeUnit 綠色
-        var ddinfo = steer.render.DebugDrawInfo.create(mouseUnit);
-        ddinfo.color = 0xFF6666;
-        ddinfo = steer.render.DebugDrawInfo.create(fleeUnit);
-        ddinfo.color = 0x6666FF;
-        ddinfo = steer.render.DebugDrawInfo.create(evadeUnit);
-        ddinfo.color = 0x66FF66;
+            //unit 除錯顯示設定, mouse Unit 紅色, fleeUnit 藍色, evadeUnit 綠色
+            var ddinfo = steer.render.DebugDrawInfo.create(mouseUnit);
+            ddinfo.color = 0xFF6666;
+            ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+            ddinfo = steer.render.DebugDrawInfo.create(fleeUnit);
+            ddinfo.color = 0x6666FF;
+            ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+            ddinfo = steer.render.DebugDrawInfo.create(evadeUnit);
+            ddinfo.color = 0x66FF66;
+            ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+            // 建立 SteerTimer 設定更新頻率 30 FPS
+            var myTimer = new steer.SteerTimer(30);
 
-        // 建立 SteerTimer 設定更新頻率 20 FPS
-        var myTimer = new steer.SteerTimer(20);
+            // 躲避多少將來目標的位置 4 => 4 step 後
+            var evadeRatio = 4;
 
-        //設定 每次運算時 LOGIC_UPDATE 時更新運算 (此範例為每秒 20次)
-        myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+            //設定 每次運算時 LOGIC_UPDATE 時更新運算 (此範例為每秒 30次)
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
 
-            //delta 紀載 每次更新的時間差
-            var delta = e.values.delta;
+                //delta 紀載 每次更新的時間差
+                var delta = e.values.delta;
 
-            //在更新任何動作前設定 domain.preUpdate() (目的為紀錄可能使用的參數，增加運算效能)
-            domain.preUpdate();
+                //在更新任何動作前設定 domain.preUpdate() (目的為紀錄可能使用的參數，增加運算效能)
+                domain.preUpdate();
 
-            //透過 steer.controls.Behavior 物件 設定 Unit 追蹤 滑鼠作標 (seek behavior)
-            var seekForce = steer.controls.Behavior.seek(mouseUnit, mousePt);
-            mouseUnit.applyForce(seekForce);
+                mouseUnit.applyForce(steer.controls.Behavior.arrival(mouseUnit, mousePt));
 
-            var fleeForce = steer.controls.Behavior.flee(fleeUnit, mouseUnit.getb2Position());
-            fleeUnit.applyForce(fleeForce);
+                var fleeForce = steer.controls.Behavior.flee(fleeUnit, mouseUnit.getb2Position());
+                fleeUnit.applyForce(fleeForce);
 
-            var evadeForce = steer.controls.Behavior.evade(evadeUnit, mouseUnit);
-            evadeUnit.applyForce(evadeForce);
+                var evadeForce = steer.controls.Behavior.evade(evadeUnit, mouseUnit, evadeRatio);
+                evadeUnit.applyForce(evadeForce);
 
-            wrapUnitCenter([fleeUnit, evadeUnit]); //in controlHepler.js
+                wrapUnitCenter([fleeUnit, evadeUnit]); //in controlHepler.js
 
-            //更新 domain 帶入每次更新的時間差，透過經過時間做為移動大小的依據
-            domain.update(delta);
+                //更新 domain 帶入每次更新的時間差，透過經過時間做為移動大小的依據
+                domain.update(delta);
 
-        });
+            });
 
-        //設定 畫面更新運算 RENDER_UPDATE (每秒 60次)
-        myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
+            //設定 畫面更新運算 RENDER_UPDATE (每秒 60次)
+            myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
 
-            //domain 中所有 Renderer 更新視覺
-            domain.integrate(e.values.delta);
+                //domain 中所有 Renderer 更新視覺
+                domain.integrate(e.values.delta);
 
+                //繪製座標 (只供範例顯示及除錯)
+                pixiDR.guideGrahpic.clear();
+                var offset = steer.Vector.sub(mouseUnit.getb2Position(), evadeUnit.getb2Position());
+                var distanceDelta = offset.mag() / mouseUnit.maxSpeed;
+                var targetVelAvg = mouseUnit.averageVelocity().mult(distanceDelta);
+                var futureAt = mouseUnit.getb2Position().add(targetVelAvg);
+                pixiDR.drawDot(futureAt, 0x99CC99, 0.1, 0.5);
+                pixiDR.drawSegment(evadeUnit.getb2Position(), futureAt, 0x99CC99, 0.03, 0.5);
+                pixiDR.drawDot(mouseUnit.getb2Position(), 0x9999FF, 0.1, 0.5);
+                pixiDR.drawSegment(mouseUnit.getb2Position(), fleeUnit.getb2Position(), 0x9999FF, 0.03, 0.5);
 
-            ////繪製座標 (只供範例顯示及除錯)
-            pixiDR.guideGrahpic.clear();
-            pixiDR.drawDot(mousePt, 0x66FF66, 0.8, 0.5);
-            var evadeFuture = mouseUnit.getb2Position().clone();
-            var futurePt = mouseUnit.velocity.clone();
-            evadeFuture.add(futurePt);
-            pixiDR.drawDot(evadeFuture, 0x99CC99, 0.1, 0.5);
-            pixiDR.drawSegment(evadeUnit.getb2Position(), evadeFuture, 0x99CC99, 0.03, 0.5);
+                pixiDR.drawDot(mousePt, 0x99CC99, 1, 0.5);
 
-            pixiDR.drawDot(mouseUnit.getb2Position(), 0x9999FF, 0.1, 0.5);
-            pixiDR.drawSegment(mouseUnit.getb2Position(), fleeUnit.getb2Position(), 0x9999FF, 0.03, 0.5);
+            });
 
-        });
-
-        //SteerTimer 開始運算
-        myTimer.start();
+            //SteerTimer 開始運算
+            myTimer.start();
 
 
-    }
+        }
 
     </script>
 

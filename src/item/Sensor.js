@@ -29,16 +29,16 @@ var steer;
             }
             Sensor.prototype.asForcePushVector = function (force) {
                 this.forceType = Sensor.FORCE_PUSH_VECTOR;
-                this.force = force;
-                this.forceAngle = this.force.heading();
+                this.pushForce = force.clone().mult(0.01);
+                this.forceAngle = this.pushForce.heading();
             };
             Sensor.prototype.asForcePushCenter = function (forceMagnitude) {
                 this.forceType = Sensor.FORCE_PUSH_CENTER;
-                this.forceMagnitude = forceMagnitude;
+                this.forceMagnitude = forceMagnitude * 0.01;
             };
             Sensor.prototype.asForcePullCenter = function (forceMagnitude) {
                 this.forceType = Sensor.FORCE_PULL_CENTER;
-                this.forceMagnitude = forceMagnitude;
+                this.forceMagnitude = forceMagnitude * 0.01;
             };
             Sensor.prototype.asEventSensor = function (eventStart, eventEnd) {
                 this.eventStart = eventStart;
@@ -50,11 +50,12 @@ var steer;
                     var unit = this.overLapItems[key];
                     switch (this.forceType) {
                         case Sensor.FORCE_PUSH_VECTOR:
-                            unit.applyForce(steer.Vector.fromAngle(this.force.heading() + this.b2body.GetAngle(), this.force.mag()));
+                            unit.applyForce(steer.Vector.fromAngle(this.pushForce.heading() + this.b2body.GetAngle(), this.pushForce.mag()));
                             break;
                         case Sensor.FORCE_PUSH_CENTER:
                             var angleVec = steer.Vector.sub(unit.getb2Position(), this.getb2Position());
-                            unit.applyForce(angleVec.normalizeThanMult(this.forceMagnitude));
+                            angleVec.normalizeThanMult(this.forceMagnitude);
+                            unit.applyForce(angleVec);
                             break;
                         case Sensor.FORCE_PULL_CENTER:
                             var angleVec = steer.Vector.sub(this.getb2Position(), unit.getb2Position());

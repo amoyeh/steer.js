@@ -30,7 +30,7 @@ var steer;
             PathAreaControls.followPath = function (unit, path) {
                 if (unit.pathAtIndex + 1 >= path.segments.length && unit.loopOnPath == false) {
                     var lastPathPoint = path.segments[path.segments.length - 1];
-                    return controls.Behavior.arrive(unit, lastPathPoint);
+                    return controls.Behavior.arrival(unit, lastPathPoint);
                 }
                 var ddinfo = steer.render.DebugDrawInfo.getInfo(unit);
                 var ahead = unit.velocity.clone();

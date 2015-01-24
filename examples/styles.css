@@ -93,9 +93,9 @@ hr {
     height: 30px;
     text-decoration: none;
     color: #ffffff;
-    position:relative;
-    bottom:5px;
-    width:120px;
+    position: relative;
+    bottom: 5px;
+    width: 120px;
 }
 
 .toggleBtnOn {
@@ -238,15 +238,22 @@ input[type="range"] {
 .uiRange {
     width: 140px;
     position: relative;
-    top:3px;
+    top: 3px;
 }
+
 .uiRangeTxt {
     position: relative;
     left: 160px;
     top: -12px;
     width: 200px;
 }
-
+.uiRangeTxtSmall {
+    position: relative;
+    left: 3px;
+    top: 15px;
+    width: 300px;
+    font-size:12px;
+}
 /* toggle on off ui default style */
 /* text on the right side of the toggle */
 .toggleTxt {

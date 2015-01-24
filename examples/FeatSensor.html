@@ -5,10 +5,11 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <script src="steer.min.js"></script>
+    <!--<script src="steer.min.js"></script>-->
     <script src="controlHelper.js"></script>
+    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="initScene();">
+<body onload="runClassLoader();">
 
     <div id="mainView">
         <div id="divScreen"></div>
@@ -16,7 +17,7 @@
 
             <div class="rowUis">
                 <div class="uiSet">
-                    <input type="range" class="uiRange" id="rangeSensorRatio" min="0.1" max="3" step="0.1" value="1" />
+                    <input type="range" class="uiRange" id="rangeSensorRatio" min="0.1" max="1" step="0.05" value="0.1" />
                     <div class="uiRangeTxt" id="rangeSensorRatioTxt">Sensor Power: 0.1</div>
                 </div>
             </div>
@@ -76,11 +77,8 @@
             domain.createBox2dDebugDraw("box2dDrawCanvas", box2d.b2DrawFlags.e_none | box2d.b2DrawFlags.e_shapeBit | box2d.b2DrawFlags.e_centerOfMassBit);
 
 
-            //UI 變數
-            var sensorRatio = 0.1;
-
             // unit 跟隨滑鼠
-            var newUnit = steer.item.Creator.createUnit({ x: 450, y: 470, radius: 15, maxForce: 10, maxSpeed: 30, dynamic: true });
+            var newUnit = steer.item.Creator.createUnit({ x: 600, y: 250, radius: 15, maxForce: 2, maxSpeed: 10, dynamic: true });
             var ddInfo = steer.render.DebugDrawInfo.create(newUnit);
             ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
 
@@ -98,7 +96,7 @@
             var pSensor1 = steer.item.Creator.createSensorArea({ asBoxCenter: true, x: 750, y: 150, heightHalf: 40, widthHalf: 80 });
             //pSensor1.setBodyAngle(60);
             //設定當 unit 接觸時推至中央 Sensor (力道單位為Box2d -> 1 = 30 pixel)
-            pSensor1.asForcePushVector(new steer.Vector(0, 1));
+            pSensor1.asForcePushVector(new steer.Vector(0, 0.1));
 
 
             //動態 Sensor 圓形
@@ -107,7 +105,7 @@
 
             //動態 Sensor 方形
             var pSensorD1 = steer.item.Creator.createSensorArea({ asBoxCenter: true, x: 750, y: 350, heightHalf: 50, widthHalf: 30, dynamic: true });
-            pSensorD1.asForcePushVector(new steer.Vector(1, 1));
+            pSensorD1.asForcePushVector(new steer.Vector(0.1, 0.1));
 
             //事件 Sensor , start contact
             var EStartSensor = steer.item.Creator.createSensorArea({ asCircle: true, x: 500, y: 400, radius: 30, dynamic: true });
@@ -122,23 +120,20 @@
                 newUnit.setSteerPosition(700, 100);
             });
 
-            var myTimer = new steer.SteerTimer(20);
+            var myTimer = new steer.SteerTimer(30);
             myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
 
                 var delta = e.values.delta;
                 domain.preUpdate();
                 domain.box2dDebugDraw.m_ctx.clearRect(0, 0, 2000, 2000);
 
-                var seekForce = steer.controls.Behavior.seek(newUnit, mousePt);
-                newUnit.applyForce(seekForce);
+                newUnit.applyForce(steer.controls.Behavior.arrival(newUnit, mousePt));
 
-                //更新測試座標 Sensor 尚未支援 time based integration
+                //更新測試座標 
                 var xto = 200 + Math.cos(addDeg) * 50;
                 cSensorD1.setSteerPosition(xto, 500);
                 pSensorD1.setSteerPosition(750 + Math.sin(addDeg) * 100, 450 + Math.cos(addDeg * 2) * 50);
                 pSensorD1.setBodyAngle(addDeg * -1, false);
-                pSensorD1.asForcePushVector(steer.Vector.fromAngle(addDeg * 2, 1));
-
                 addDeg += 0.0348; //adding 2 degree radian
 
                 domain.update(delta);
@@ -164,7 +159,9 @@
                 cSensor.asForcePushCenter(e.target.value);
                 cSensor2.asForcePullCenter(e.target.value);
                 cSensorD1.asForcePushCenter(e.target.value);
-                pSensor1.force.normalizeThanMult(e.target.value);
+                pSensor1.asForcePushVector(new steer.Vector(0, e.target.value));
+                pSensorD1.asForcePushVector(new steer.Vector(e.target.value, e.target.value));
+
             });
 
 

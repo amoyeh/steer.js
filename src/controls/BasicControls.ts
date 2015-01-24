@@ -3,51 +3,57 @@
     export class BasicControls {
 
         static seek(unit: item.Unit, vector: Vector): Vector {
-            var desired: Vector = Vector.sub(vector, unit.getb2Position()).limit(unit.maxSpeed);
-            var steerVec: Vector = Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-            return steerVec;
+            return Vector.sub(vector, unit.getb2Position()).limit(unit.maxForce);
         }
 
         static flee(unit: item.Unit, vector: Vector): Vector {
-            var desired: Vector = Vector.sub(unit.getb2Position(), vector).limit(unit.maxSpeed);
-            var steerVec: Vector = Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-            //steer.PixiDebugRender.instance.drawDot(vector, 0xCC9933, 0.05, 0.5);
-            return steerVec;
+            return Vector.sub(unit.getb2Position(), vector).limit(unit.maxForce);
         }
 
         static pursuit(unit: item.Unit, target: item.Unit): Vector {
-            //var distance: Vector = Vector.sub(target.getb2Position(), unit.getb2Position());
-            //var predictValue: number = distance.mag() / unit.maxSpeed;
-            //var targetFuture: Vector = Vector.add(target.getb2Position(), Vector.mult(target.velocity, predictValue));
-            ////steer.PixiDebugRender.instance.drawDot(targetFuture, 0xCC9933, 0.05, 0.5);
-            ////steer.PixiDebugRender.instance.drawSegment(unit.getb2Position(), targetFuture, 0xCC9933, 0.1, 0.5);
-            var targetFuture: steer.Vector = target.getb2Position().clone();
-            var targetSpeed: steer.Vector = target.velocity.clone();
-            targetFuture.add(targetSpeed);
-            return BasicControls.seek(unit, targetFuture);
+            var offset: Vector = Vector.sub(target.getb2Position(), unit.getb2Position());
+            var distanceDelta: number = offset.mag() / target.maxSpeed;
+            var targetVelAvg: Vector = target.averageVelocity().mult(distanceDelta);
+            var futureAt: Vector = target.getb2Position().add(targetVelAvg);
+            return BasicControls.seek(unit, futureAt);
         }
 
         static evade(unit: item.Unit, target: item.Unit): Vector {
-            var targetFuture: steer.Vector = target.getb2Position().clone();
-            var targetSpeed: steer.Vector = target.velocity.clone();
-            targetFuture.add(targetSpeed);
-            return BasicControls.flee(unit, targetFuture);
+            var offset: Vector = Vector.sub(target.getb2Position(), unit.getb2Position());
+            var distanceDelta: number = offset.mag() / target.maxSpeed;
+            var targetVelAvg: Vector = target.averageVelocity().mult(distanceDelta);
+            var futureAt: Vector = target.getb2Position().add(targetVelAvg);
+            return BasicControls.flee(unit, futureAt);
         }
 
-        static arrive(unit: item.Unit, vector: Vector): Vector {
-            var desired: Vector = Vector.sub(vector, unit.getb2Position());
-            var distance: number = desired.mag();
-            // when to slow down, set to unit's max speed * 2
-            var slowDownRange: number = unit.maxSpeed * 2;
-            desired.normalize();
-            if (distance < slowDownRange) {
-                var multValue: number = MathUtil.map(distance, 0, slowDownRange, 0, unit.maxSpeed);
-                desired.mult(multValue);
+        static arrival(unit: item.Unit, vector: Vector, slowDownRatio: number= 2): Vector {
+
+            //method1 original way
+            //------------------------------------------------------
+            //var offset: Vector = Vector.sub(vector, unit.getb2Position());
+            //var distance: number = offset.mag();
+            //var slowDownRange: number = unit.maxSpeed * slowDownRatio;
+            //if (distance < slowDownRange) {
+            //    offset.normalize().mult(unit.maxSpeed * (distance / slowDownRange))
+            //} else {
+            //    offset.normalize().mult(unit.maxSpeed);
+            //}
+            //return offset.sub(unit.velocity);
+
+            //method 2, distance map based
+            //------------------------------------------------------
+            var offset: Vector = Vector.sub(vector, unit.getb2Position());
+            var distance: number = offset.mag();
+            if (distance < unit.maxSpeed * slowDownRatio) {
+                var mapValue: number = MathUtil.map(distance, 0, unit.maxSpeed * slowDownRatio, 0, unit.maxSpeed);
+                if (Math.abs(mapValue) < 0.01) mapValue = 0;
+                offset.normalize().mult(mapValue);
             } else {
-                desired.mult(unit.maxSpeed);
+                offset.normalize().mult(unit.maxSpeed);
             }
-            var steerVec: Vector = Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-            return steerVec;
+            var dest: Vector = Vector.sub(offset, unit.velocity).limit(unit.maxForce).div(30);
+            return dest;
+
         }
 
         static separation(unit: item.Unit, list: item.Unit[]): Vector {
@@ -97,7 +103,7 @@
             if (count > 0) {
                 // to average center
                 sum.div(count).normalizeThanMult(unit.maxSpeed);
-                sum.sub(unit.velocity).limit(unit.maxForce);
+                sum.limit(unit.maxForce);
             }
             return sum;
         }

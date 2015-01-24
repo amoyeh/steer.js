@@ -5,10 +5,11 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <script src="steer.min.js"></script>
+    <!--<script src="steer.min.js"></script>-->
     <script src="controlHelper.js"></script>
+    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="initScene();">
+<body onload="runClassLoader();">
 
     <div id="mainView">
         <div id="divScreen"></div>
@@ -23,11 +24,11 @@
                     <span id="sliderPath" class="checkbox"><input id="ckPath" type="checkbox"><label></label></span>
                 </div>
                 <div class="uiSet" style="width:350px;">
-                    <input type="range" class="uiRange" id="rangeVelocityAhead" min="0.1" max="3" step="0.1" value="1" />
-                    <div class="uiRangeTxt" id="rangeVelocityAheadTxt">Velocity Ahead Ratio: 1</div>
+                    <input type="range" class="uiRange" id="rangeVelocityAhead" min="1" max="10" step="1" value="3" />
+                    <div class="uiRangeTxt" id="rangeVelocityAheadTxt">Velocity Ahead Ratio: 3</div>
                 </div>
                 <div class="uiSet">
-                    <input type="range" class="uiRange" id="rangePathOnFront" min="0.1" max="3" step="0.1" value="1" />
+                    <input type="range" class="uiRange" id="rangePathOnFront" min="1" max="5" step="0.5" value="3" />
                     <div class="uiRangeTxt" id="rangePathOnFrontTxt">Path Front Ratio: 1</div>
                 </div>
             </div>
@@ -68,7 +69,7 @@
 
             //建立 Path 路徑
             //設定建立參數 new steer.item.PathInfo(座標, 寬度, 貝茲取線節點數);
-            var pathInfo = new steer.item.PathInfo(new steer.Vector(100, 100), 50, 8);
+            var pathInfo = new steer.item.PathInfo(new steer.Vector(100, 100), 70, 8);
             //lineTo(目標x, 目標y);
             pathInfo.lineTo(924, 100);
             pathInfo.lineTo(924, 400);
@@ -81,18 +82,18 @@
 
             //建立Unit 跟隨路徑
             var units = [];
-            var newUnit1 = steer.item.Creator.createUnit({ x: 512, y: 400, radius: 10, maxForce: 10, maxSpeed: 50, dynamic: true, canCollide: true });
-            newUnit1.pathVelocityRatio = 1;
-            newUnit1.pathOnFrontRatio = 1;
+            var newUnit1 = steer.item.Creator.createUnit({ x: 512, y: 400, radius: 10, maxForce: 2, maxSpeed: 10, dynamic: true, canCollide: true });
+            newUnit1.pathVelocityRatio = 3;
+            newUnit1.pathOnFrontRatio = 3;
             //設定跟隨路徑 初始參數
             steer.controls.Behavior.initPathUnit(newUnit1, path, true, true, 1);
             units.push(newUnit1);
             var ddInfo = steer.render.DebugDrawInfo.create(newUnit1);
             ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_PATH_INFO;
 
-            var newUnit2 = steer.item.Creator.createUnit({ x: 500, y: 100, radius: 15, maxForce: 10, maxSpeed: 30, dynamic: true, canCollide: true });
-            newUnit2.pathVelocityRatio = 1;
-            newUnit2.pathOnFrontRatio = 1;
+            var newUnit2 = steer.item.Creator.createUnit({ x: 500, y: 100, radius: 15, maxForce: 2, maxSpeed: 10, dynamic: true, canCollide: true });
+            newUnit2.pathVelocityRatio = 3;
+            newUnit2.pathOnFrontRatio = 3;
             steer.controls.Behavior.initPathUnit(newUnit2, path, true, true, 1);
             units.push(newUnit2);
             ddInfo = steer.render.DebugDrawInfo.create(newUnit2);

@@ -6,41 +6,40 @@ var steer;
             function BasicControls() {
             }
             BasicControls.seek = function (unit, vector) {
-                var desired = steer.Vector.sub(vector, unit.getb2Position()).limit(unit.maxSpeed);
-                var steerVec = steer.Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-                return steerVec;
+                return steer.Vector.sub(vector, unit.getb2Position()).limit(unit.maxForce);
             };
             BasicControls.flee = function (unit, vector) {
-                var desired = steer.Vector.sub(unit.getb2Position(), vector).limit(unit.maxSpeed);
-                var steerVec = steer.Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-                return steerVec;
+                return steer.Vector.sub(unit.getb2Position(), vector).limit(unit.maxForce);
             };
             BasicControls.pursuit = function (unit, target) {
-                var targetFuture = target.getb2Position().clone();
-                var targetSpeed = target.velocity.clone();
-                targetFuture.add(targetSpeed);
-                return BasicControls.seek(unit, targetFuture);
+                var offset = steer.Vector.sub(target.getb2Position(), unit.getb2Position());
+                var distanceDelta = offset.mag() / target.maxSpeed;
+                var targetVelAvg = target.averageVelocity().mult(distanceDelta);
+                var futureAt = target.getb2Position().add(targetVelAvg);
+                return BasicControls.seek(unit, futureAt);
             };
             BasicControls.evade = function (unit, target) {
-                var targetFuture = target.getb2Position().clone();
-                var targetSpeed = target.velocity.clone();
-                targetFuture.add(targetSpeed);
-                return BasicControls.flee(unit, targetFuture);
+                var offset = steer.Vector.sub(target.getb2Position(), unit.getb2Position());
+                var distanceDelta = offset.mag() / target.maxSpeed;
+                var targetVelAvg = target.averageVelocity().mult(distanceDelta);
+                var futureAt = target.getb2Position().add(targetVelAvg);
+                return BasicControls.flee(unit, futureAt);
             };
-            BasicControls.arrive = function (unit, vector) {
-                var desired = steer.Vector.sub(vector, unit.getb2Position());
-                var distance = desired.mag();
-                var slowDownRange = unit.maxSpeed * 2;
-                desired.normalize();
-                if (distance < slowDownRange) {
-                    var multValue = steer.MathUtil.map(distance, 0, slowDownRange, 0, unit.maxSpeed);
-                    desired.mult(multValue);
+            BasicControls.arrival = function (unit, vector, slowDownRatio) {
+                if (slowDownRatio === void 0) { slowDownRatio = 2; }
+                var offset = steer.Vector.sub(vector, unit.getb2Position());
+                var distance = offset.mag();
+                if (distance < unit.maxSpeed * slowDownRatio) {
+                    var mapValue = steer.MathUtil.map(distance, 0, unit.maxSpeed * slowDownRatio, 0, unit.maxSpeed);
+                    if (Math.abs(mapValue) < 0.01)
+                        mapValue = 0;
+                    offset.normalize().mult(mapValue);
                 }
                 else {
-                    desired.mult(unit.maxSpeed);
+                    offset.normalize().mult(unit.maxSpeed);
                 }
-                var steerVec = steer.Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-                return steerVec;
+                var dest = steer.Vector.sub(offset, unit.velocity).limit(unit.maxForce).div(30);
+                return dest;
             };
             BasicControls.separation = function (unit, list) {
                 var sum = new steer.Vector(0, 0);
@@ -82,7 +81,7 @@ var steer;
                 }
                 if (count > 0) {
                     sum.div(count).normalizeThanMult(unit.maxSpeed);
-                    sum.sub(unit.velocity).limit(unit.maxForce);
+                    sum.limit(unit.maxForce);
                 }
                 return sum;
             };

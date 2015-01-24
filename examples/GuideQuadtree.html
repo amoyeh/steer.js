@@ -6,10 +6,11 @@
     <!-- 載入 box2d, pixi and steer 依下列順序 -->
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <script src="steer.min.js"></script>
+    <!--<script src="steer.min.js"></script>-->
     <script src="controlHelper.js"></script>
+    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="initScene();">
+<body onload="runClassLoader();">
 
     <div id="mainView">
         <div id="divScreen"></div>
@@ -47,7 +48,7 @@
 
             //建立 10 個 Unit 物件 並設定為隨機位置
             var units = [];
-            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 5, maxSpeed: 10, dynamic: true, canCollide: true };
+            var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 1, maxSpeed: 5, dynamic: true, canCollide: true };
             for (var t = 0; t < 20 ; t++) {
                 unitInfo.x = steer.MathUtil.range(50, 974);
                 unitInfo.y = steer.MathUtil.range(50, 610);
@@ -81,7 +82,7 @@
             }
             var borders = steer.item.Creator.createPolygonBorder(borderInfo);
 
-            var myTimer = new steer.SteerTimer(20);
+            var myTimer = new steer.SteerTimer(60);
             myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
                 var delta = e.values.delta;
                 domain.preUpdate();
@@ -102,7 +103,7 @@
                 pixiDR.guideGrahpic.clear();
 
                 //繪製quadTree 資訊
-                var qsels = domain.selector.quadTreeSelect(units[targetId]);
+                var qsels = domain.selector.quadTreeSelect(units[targetId], false);
                 if (qsels) {
                     for (var k = 0; k < qsels.length; k++) {
                         if (qsels[k].data.b2body) {

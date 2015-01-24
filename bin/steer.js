@@ -477,16 +477,14 @@ var steer;
         function SteerTimer(TPS) {
             _super.call(this);
             this.TPS = TPS;
+            this.tpsValue = this.TPS / 1000;
             this.logicTicker = null;
         }
         SteerTimer.prototype.start = function () {
-            var _this = this;
             this.accumulateLogicTime = 0;
             this.lastLogicUpdate = Date.now();
             this.LogicPerMsec = Math.round(1000 / this.TPS);
-            this.logicTicker = setInterval(function () {
-                _this.logicIntervalUpdate();
-            }, SteerTimer.INTERVAL_RATE);
+            this.logicIntervalUpdate();
         };
 
         SteerTimer.prototype.updateTPS = function (value) {
@@ -496,12 +494,14 @@ var steer;
         };
 
         SteerTimer.prototype.isRunning = function () {
-            return (this.logicTicker != null);
+            return (this.requestAnimateId != null);
         };
 
         SteerTimer.prototype.stop = function () {
-            clearInterval(this.logicTicker);
-            this.logicTicker = null;
+            if (this.requestAnimateId) {
+                window.cancelAnimationFrame(this.requestAnimateId);
+                this.requestAnimateId = undefined;
+            }
         };
 
         SteerTimer.prototype.logicIntervalUpdate = function () {
@@ -514,8 +514,12 @@ var steer;
             }
             var intergrate = (this.accumulateLogicTime / this.LogicPerMsec);
             this.fireEvent(new steer.Event(steer.Event.RENDER_UPDATE, this, { delta: intergrate }));
+
+            var self = this;
+            this.requestAnimateId = window.requestAnimationFrame(function () {
+                self.logicIntervalUpdate();
+            });
         };
-        SteerTimer.INTERVAL_RATE = 17;
         return SteerTimer;
     })(steer.EventDispatcher);
     steer.SteerTimer = SteerTimer;
@@ -792,8 +796,9 @@ var steer;
                 this.pathAtIndex = 0;
                 this.pathSeekAheadAmt = 1;
                 this.loopOnPath = false;
-                this.rayFrontRatio = 2;
+                this.rayFrontRatio = 4;
                 this.canCollide = true;
+                this.mass = 1;
                 this.maxSpeed = maxSpeed;
                 this.maxForce = maxForce;
                 this.velocity = new steer.Vector(0, 0);
@@ -816,18 +821,12 @@ var steer;
                     return;
                 }
 
-                delta *= 0.01;
-
-                this.acceleration.mult(delta);
-                this.velocity.add(this.acceleration);
-                this.velocity.limit(this.maxSpeed);
-                var deltaVelocity = this.velocity.clone().mult(delta);
-                deltaVelocity.limit(this.maxSpeed);
-
-                deltaVelocity.mult(30);
+                this.acceleration.div(this.mass).mult(delta);
+                var oldVelocity = this.velocity.clone();
+                this.velocity.add(this.acceleration).limit(this.maxSpeed);
+                var averageVelocity = this.velocity.clone().add(oldVelocity).div(2);
                 this.b2body.SetAwake(true);
-
-                this.b2body.SetLinearVelocity(deltaVelocity.makeB2Vec());
+                this.b2body.SetLinearVelocity(averageVelocity.mult(delta).makeB2Vec());
                 this.acceleration.setTo(0, 0);
             };
 
@@ -2248,16 +2247,11 @@ var steer;
             function BasicControls() {
             }
             BasicControls.seek = function (unit, vector) {
-                var desired = steer.Vector.sub(vector, unit.getb2Position()).limit(unit.maxSpeed);
-                var steerVec = steer.Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-                return steerVec;
+                return steer.Vector.sub(vector, unit.getb2Position()).limit(unit.maxForce);
             };
 
             BasicControls.flee = function (unit, vector) {
-                var desired = steer.Vector.sub(unit.getb2Position(), vector).limit(unit.maxSpeed);
-                var steerVec = steer.Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-
-                return steerVec;
+                return steer.Vector.sub(unit.getb2Position(), vector).limit(unit.maxForce);
             };
 
             BasicControls.pursuit = function (unit, target) {

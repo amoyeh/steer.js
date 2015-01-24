@@ -32,11 +32,11 @@ var steer;
                 "render/DebugColors.js",
                 "render/DebugDrawInfo.js",
                 "render/PixiDebugRenderer.js",
-                "ClassTool.js",
-                "DebugDraw.js",
                 "pathfinding.js",
                 "three.min.js",
-                "box2d.js"
+                "box2d.js",
+                "ClassTool.js",
+                "DebugDraw.js"
             ];
             var basepath = this.basePath;
             var listWithPath = list.map(function (filepath) {

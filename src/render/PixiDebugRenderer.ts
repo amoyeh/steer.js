@@ -178,12 +178,15 @@
             g.lineStyle(0.03, DebugColors.DC_RAYCAST, DebugColors.DC_RAYCAST_A);
             if (ddinfo.drawMask & DebugDrawInfo.UNIT_RAYCAST) {
                 var rayPts: steer.Vector[] = item.c_rayInfo;
-                for (var s: number = 0; s < rayPts.length; s += 2) {
-                    var ix: number = item.getb2X();
-                    var iy: number = item.getb2Y();
-                    g.moveTo(rayPts[s].x - ix - 0.5, rayPts[s].y - iy - 0.5);
-                    g.lineTo(rayPts[s + 1].x - ix - 0.5, rayPts[s + 1].y - iy - 0.5);
+                if (item.c_velocityLength > 0.7) {
+                    for (var s: number = 0; s < rayPts.length; s += 2) {
+                        var ix: number = item.getb2X();
+                        var iy: number = item.getb2Y();
+                        g.moveTo(rayPts[s].x - ix - 0.5, rayPts[s].y - iy - 0.5);
+                        g.lineTo(rayPts[s + 1].x - ix - 0.5, rayPts[s + 1].y - iy - 0.5);
+                    }
                 }
+                
             }
             if (ddinfo.drawMask & DebugDrawInfo.UNIT_SEPARATION) {
                 g.lineStyle(0.03, DebugColors.DC_SEPARATION, DebugColors.DC_SEPARATION_A);
@@ -211,16 +214,17 @@
             }
             if (ddinfo.drawMask & DebugDrawInfo.UNIT_PATH_INFO) {
                 if (ddinfo.pathPredict) {
-                    g.lineStyle(0.03, DebugColors.DC_PATH_GUIDE, DebugColors.DC_PATH_GUIDE_A);
+                    g.lineStyle(0.05, DebugColors.DC_PATH_GUIDE, DebugColors.DC_PATH_GUIDE_A);
                     g.drawCircle(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5, 0.05);
                     g.drawCircle(ddinfo.pathNormal.x - .5, ddinfo.pathNormal.y - .5, 0.05);
                     g.moveTo(-.5, -.5);
                     g.lineTo(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5);
                     g.lineTo(ddinfo.pathNormal.x - .5, ddinfo.pathNormal.y - .5);
 
-                    g.moveTo(-.5, -.5);
-                    g.lineStyle(0.15, DebugColors.DC_PATH_GUIDE, DebugColors.DC_PATH_GUIDE_A2);
+                    g.drawCircle(ddinfo.pathOnFront.x - .5, ddinfo.pathOnFront.y - .5, 0.1);
+                    g.moveTo(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5);
                     g.lineTo(ddinfo.pathOnFront.x - .5, ddinfo.pathOnFront.y - .5);
+                    //g.lineStyle(0.2, DebugColors.DC_PATH_GUIDE, DebugColors.DC_PATH_GUIDE_A2);
                 }
             }
             if (ddinfo.drawMask & DebugDrawInfo.BOUNDING_BOX) {

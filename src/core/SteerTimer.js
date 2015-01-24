@@ -11,16 +11,14 @@ var steer;
         function SteerTimer(TPS) {
             _super.call(this);
             this.TPS = TPS;
+            this.tpsValue = this.TPS / 1000;
             this.logicTicker = null;
         }
         SteerTimer.prototype.start = function () {
-            var _this = this;
             this.accumulateLogicTime = 0;
             this.lastLogicUpdate = Date.now();
             this.LogicPerMsec = Math.round(1000 / this.TPS);
-            this.logicTicker = setInterval(function () {
-                _this.logicIntervalUpdate();
-            }, SteerTimer.INTERVAL_RATE);
+            this.logicIntervalUpdate();
         };
         SteerTimer.prototype.updateTPS = function (value) {
             this.stop();
@@ -28,11 +26,13 @@ var steer;
             this.start();
         };
         SteerTimer.prototype.isRunning = function () {
-            return (this.logicTicker != null);
+            return (this.requestAnimateId != null);
         };
         SteerTimer.prototype.stop = function () {
-            clearInterval(this.logicTicker);
-            this.logicTicker = null;
+            if (this.requestAnimateId) {
+                window.cancelAnimationFrame(this.requestAnimateId);
+                this.requestAnimateId = undefined;
+            }
         };
         SteerTimer.prototype.logicIntervalUpdate = function () {
             var timeDiff = Date.now() - this.lastLogicUpdate;
@@ -44,8 +44,11 @@ var steer;
             }
             var intergrate = (this.accumulateLogicTime / this.LogicPerMsec);
             this.fireEvent(new steer.Event(steer.Event.RENDER_UPDATE, this, { delta: intergrate }));
+            var self = this;
+            this.requestAnimateId = window.requestAnimationFrame(function () {
+                self.logicIntervalUpdate();
+            });
         };
-        SteerTimer.INTERVAL_RATE = 17;
         return SteerTimer;
     })(steer.EventDispatcher);
     steer.SteerTimer = SteerTimer;

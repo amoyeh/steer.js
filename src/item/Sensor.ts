@@ -9,7 +9,7 @@
         public static SHAPE_BOX: number = 1;
         public static SHAPE_CIRCLE: number = 2;
 
-        public force: steer.Vector;
+        public pushForce: steer.Vector;
         public forceType: number;
         public forceAngle: number;
         public forceMagnitude: number;
@@ -43,18 +43,18 @@
 
         public asForcePushVector(force: steer.Vector): void {
             this.forceType = Sensor.FORCE_PUSH_VECTOR;
-            this.force = force;
-            this.forceAngle = this.force.heading();
+            this.pushForce = force.clone().mult(0.01);
+            this.forceAngle = this.pushForce.heading();
         }
         public asForcePushCenter(forceMagnitude: number): void {
             this.forceType = Sensor.FORCE_PUSH_CENTER;
-            this.forceMagnitude = forceMagnitude;
+            this.forceMagnitude = forceMagnitude * 0.01;
         }
         public asForcePullCenter(forceMagnitude: number): void {
             this.forceType = Sensor.FORCE_PULL_CENTER;
-            this.forceMagnitude = forceMagnitude;
+            this.forceMagnitude = forceMagnitude * 0.01;
         }
-        public asEventSensor(eventStart: Function, eventEnd:Function): void {
+        public asEventSensor(eventStart: Function, eventEnd: Function): void {
             this.eventStart = eventStart;
             this.eventEnd = eventEnd;
         }
@@ -65,11 +65,12 @@
                 var unit: Unit = <Unit>this.overLapItems[key];
                 switch (this.forceType) {
                     case Sensor.FORCE_PUSH_VECTOR:
-                        unit.applyForce(Vector.fromAngle(this.force.heading() + this.b2body.GetAngle(), this.force.mag()));
+                        unit.applyForce(Vector.fromAngle(this.pushForce.heading() + this.b2body.GetAngle(), this.pushForce.mag()));
                         break;
                     case Sensor.FORCE_PUSH_CENTER:
                         var angleVec: steer.Vector = Vector.sub(unit.getb2Position(), this.getb2Position());
-                        unit.applyForce(angleVec.normalizeThanMult(this.forceMagnitude));
+                        angleVec.normalizeThanMult(this.forceMagnitude);
+                        unit.applyForce(angleVec);
                         break;
                     case Sensor.FORCE_PULL_CENTER:
                         var angleVec: steer.Vector = Vector.sub(this.getb2Position(), unit.getb2Position());

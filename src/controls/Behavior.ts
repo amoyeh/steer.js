@@ -43,8 +43,8 @@
         @unit the unit to apply force
         @target the point to arrive
         */
-        static arrive(unit: item.Unit, vector: Vector): Vector {
-            return BasicControls.arrive(unit, vector);
+        static arrival(unit: item.Unit, vector: Vector, slowDownRatio: number= 2): Vector {
+            return BasicControls.arrival(unit, vector, slowDownRatio);
         }
 
         static separation(unit: item.Unit, list: item.Unit[]): Vector {
@@ -80,7 +80,8 @@
         }
 
         static avoidUnit(unit: item.Unit, list: item.Unit[]): Vector {
-            return AvoidControls.avoidUnit(unit, list);
+            //return AvoidControls.avoidUnit(unit, list);
+            return AvoidControls.avoidUnit2(unit, list);
         }
 
 

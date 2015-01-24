@@ -22,15 +22,18 @@ var steer;
                 this.pathAtIndex = 0;
                 this.pathSeekAheadAmt = 1;
                 this.loopOnPath = false;
-                this.rayFrontRatio = 2;
+                this.rayFrontRatio = 4;
                 this.canCollide = true;
+                this.mass = 1;
                 this.maxSpeed = maxSpeed;
                 this.maxForce = maxForce;
                 this.velocity = new steer.Vector(0, 0);
                 this.acceleration = new steer.Vector(0, 0);
                 this.diffPosition = new box2d.b2Vec2(0, 0);
+                this.c_averageVelocity = new steer.Vector();
                 this.separateRadius = this.radius + Unit.UnitSperateGap;
                 this.cohesionRadius = this.alignRadius = this.radius;
+                this.oldVelocities = [];
             }
             Unit.prototype.applyForce = function (force, mult) {
                 if (mult === void 0) { mult = 1; }
@@ -38,21 +41,27 @@ var steer;
                     force.mult(mult);
                 this.acceleration.add(force);
             };
+            Unit.prototype.addAverageData = function (newOne) {
+                if (this.oldVelocities.length > 2)
+                    this.oldVelocities.shift();
+                this.oldVelocities.push(newOne);
+            };
+            Unit.prototype.averageVelocity = function () {
+                return this.velocity.clone();
+            };
             Unit.prototype.update = function (delta) {
                 if (!this.dynamic) {
                     this.velocity.setTo(0, 0);
                     this.acceleration.setTo(0, 0);
                     return;
                 }
-                delta *= 0.01;
-                this.acceleration.mult(delta);
-                this.velocity.add(this.acceleration);
-                this.velocity.limit(this.maxSpeed);
-                var deltaVelocity = this.velocity.clone().mult(delta);
-                deltaVelocity.limit(this.maxSpeed);
-                deltaVelocity.mult(30);
+                this.acceleration.div(this.mass).mult(delta);
+                var oldVelocity = this.velocity.clone();
+                this.addAverageData(this.velocity.clone());
+                this.velocity.add(this.acceleration).limit(this.maxSpeed);
+                var averageVelocity = this.velocity.clone().add(oldVelocity).div(2);
                 this.b2body.SetAwake(true);
-                this.b2body.SetLinearVelocity(deltaVelocity.makeB2Vec());
+                this.b2body.SetLinearVelocity(averageVelocity.mult(delta).makeB2Vec());
                 this.acceleration.setTo(0, 0);
             };
             Unit.prototype.getRaycast = function (useGlobal) {
@@ -60,10 +69,11 @@ var steer;
                 var result = [];
                 var atx = this.getb2X();
                 var aty = this.getb2Y();
-                var heading = this.velocity.heading();
+                var avgVelocity = this.averageVelocity();
+                var heading = avgVelocity.heading();
                 var velocityLength = this.c_velocityLength;
                 var baseAngle = 0;
-                var speedRatio = (1 - this.velocity.mag() / this.maxSpeed) * 25;
+                var speedRatio = (1 - avgVelocity.mag() / this.maxSpeed) * 25;
                 baseAngle = Math.round(speedRatio + 5);
                 var angSideAdd = heading + (steer.MathUtil.ONED * 90);
                 var a1x = Math.cos(angSideAdd) * (this.radius + Unit.UnitSperateGap);
@@ -109,13 +119,15 @@ var steer;
                 this.b2body.CreateFixture(fixDef);
             };
             Unit.prototype.prepareUpdateCache = function () {
-                this.currentRayFront = (this.velocity.mag() * this.rayFrontRatio + this.separateRadius);
+                var avgVelocity = this.averageVelocity();
+                this.currentRayFront = (avgVelocity.mag() * this.rayFrontRatio + this.separateRadius);
                 var minLength = this.separateRadius;
                 var velocityLength = this.currentRayFront;
                 if (velocityLength < minLength)
                     velocityLength = minLength;
                 this.c_velocityLength = velocityLength;
                 this.c_rayInfo = this.getRaycast(true);
+                this.avoidInfo = {};
             };
             Unit.prototype.setb2Position = function (x, y) {
                 this.b2body.SetPosition(new box2d.b2Vec2(x, y));
@@ -139,7 +151,7 @@ var steer;
                     var lowerV = new box2d.b2Vec2(this.getb2X() - maxRadius, this.getb2Y() - maxRadius);
                     var upperV = new box2d.b2Vec2(this.getb2X() + maxRadius, this.getb2Y() + maxRadius);
                     bodyAABB.Combine1({ lowerBound: lowerV, upperBound: upperV });
-                    if (this.velocity.mag() > 0) {
+                    if (this.averageVelocity().mag() > 0) {
                         for (var s = 0; s < rayInfo.length; s += 2) {
                             bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
                             bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
@@ -154,6 +166,7 @@ var steer;
                 return null;
             };
             Unit.prototype.resetVelocity = function () {
+                this.oldVelocities = [];
                 this.velocity.setTo(0, 0);
                 this.acceleration.setTo(0, 0);
                 this.b2body.SetLinearVelocity(new box2d.b2Vec2(0, 0));

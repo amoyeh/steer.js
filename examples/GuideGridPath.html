@@ -5,12 +5,12 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <script src="steer.min.js"></script>
-    <script src="controlHelper.js"></script>
-    <!-- pathfinding for this example -->
     <script src="pathfinding.js"></script>
+    <!--<script src="steer.min.js"></script>-->
+    <script src="controlHelper.js"></script>
+    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="initScene()">
+<body onload="runClassLoader();">
 
     <div id="mainView">
         <div id="divScreen"></div>
@@ -84,8 +84,8 @@
             }
             gridMap.pathData = grid;
 
-            var unit1 = steer.item.Creator.createUnit({ x: 300, y: 100, radius: 10, maxForce: 10, maxSpeed: 30, dynamic: true, canCollide: true });
-            var unit2 = steer.item.Creator.createUnit({ x: 350, y: 100, radius: 20, maxForce: 10, maxSpeed: 30, dynamic: true, canCollide: true });
+            var unit1 = steer.item.Creator.createUnit({ x: 300, y: 100, radius: 10, maxForce: 2, maxSpeed: 10, dynamic: true, canCollide: true });
+            var unit2 = steer.item.Creator.createUnit({ x: 350, y: 100, radius: 20, maxForce: 2, maxSpeed: 10, dynamic: true, canCollide: true });
             var units = [unit1, unit2];
             for (var s = 0; s < units.length; s++) {
                 var ddinfo = steer.render.DebugDrawInfo.create(units[s]);
@@ -95,7 +95,7 @@
             //紀載最後更新路徑
             var currentPath = null;
 
-            var myTimer = new steer.SteerTimer(20);
+            var myTimer = new steer.SteerTimer(30);
             myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
                 var delta = e.values.delta;
                 domain.preUpdate();
@@ -227,7 +227,7 @@
                         grid.setWalkableAt(tox, toy, false);
                     }
                     pixiDR.drawGridmap(gridMap);
-                    //render graphic 
+                    //render graphic
                     pixiDR.integrate(0);
                 }
             }

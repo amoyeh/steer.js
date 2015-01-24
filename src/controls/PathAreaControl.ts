@@ -27,7 +27,7 @@
             //at last index using arrive when not looping
             if (unit.pathAtIndex + 1 >= path.segments.length && unit.loopOnPath == false) {
                 var lastPathPoint: Vector = path.segments[path.segments.length - 1];
-                return Behavior.arrive(unit, lastPathPoint);
+                return Behavior.arrival(unit, lastPathPoint);
             }
 
             var ddinfo: render.DebugDrawInfo = render.DebugDrawInfo.getInfo(unit);

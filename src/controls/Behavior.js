@@ -20,8 +20,9 @@ var steer;
             Behavior.evade = function (unit, target) {
                 return controls.BasicControls.evade(unit, target);
             };
-            Behavior.arrive = function (unit, vector) {
-                return controls.BasicControls.arrive(unit, vector);
+            Behavior.arrival = function (unit, vector, slowDownRatio) {
+                if (slowDownRatio === void 0) { slowDownRatio = 2; }
+                return controls.BasicControls.arrival(unit, vector, slowDownRatio);
             };
             Behavior.separation = function (unit, list) {
                 return controls.BasicControls.separation(unit, list);
@@ -51,7 +52,7 @@ var steer;
                 return new steer.Vector();
             };
             Behavior.avoidUnit = function (unit, list) {
-                return controls.AvoidControls.avoidUnit(unit, list);
+                return controls.AvoidControls.avoidUnit2(unit, list);
             };
             Behavior.gridmapForce = function (unit, grid) {
                 return controls.PathAreaControls.gridmapForce(unit, grid);
