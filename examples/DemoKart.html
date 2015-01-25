@@ -7,17 +7,24 @@
     <script src="pixi.js"></script>
     <script src="steer.min.js"></script>
     <script src="controlHelper.js"></script>
-    <!--<script src="../src/ClassLoader.js"></script>-->
 </head>
 <body onload="initScene()">
 
     <object id="svgObj" type="image/svg+xml" data="road.svg" style="opacity:0;"></object>
-    <div id="mainView">
-        <div style="position:absolute; left:0px; top:0px; width:1024px; height:660px; background:url('road.jpg'); opacity:1;"></div>
+    <div id="mainView" style="height:700px; margin-top:-350px;">
+        <div id="divBg" style="position:absolute; left:0px; top:0px; width:1024px; height:660px; background:url('road.jpg'); opacity:1;"></div>
         <div id="divScreen" style="z-index:20; background:none;"></div>
         <div id="steerLogo" style="right:12px; top: 12px;"></div>
         <div id="perTxt" style="position:absolute; left:20px; top:635px; font: 11px arial;"></div>
         <div id="renderTxt" style="position:absolute; left:165px; top:635px; font: 11px arial;"></div>
+        <div id="controls" style="height:60px;">
+            <div class="rowUis">
+                <div class="uiSet" style="width:160px;">
+                    <div class="toggleTxt">Show Path</div>
+                    <span id="sliderPath" class="checkbox"><input id="ckPath" type="checkbox"><label></label></span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="text/javascript">
@@ -33,7 +40,8 @@
             domain.createB2World(new box2d.b2Vec2(0, 0));
 
             var pixiDR = new steer.render.PixiDebugRenderer(domain, pixiStage, pixiRenderer, 1024, 660);
-            //domain.addRenderer(pixiDR);
+            domain.addRenderer(pixiDR);
+            pixiDR.container.visible = false;
 
             steer.item.Creator.setDomainReference(domain);
             steer.item.Creator.pixelCreateFormat = true;
@@ -68,12 +76,10 @@
 
                 //從指定 SVG Path Element 產生路徑
                 var svgPathElm = document.getElementById("svgObj").getSVGDocument().getElementById("roadPath");
-                var pathInfo = new steer.item.PathInfo(new steer.Vector(75, 85), 75, 10);
+                var pathInfo = new steer.item.PathInfo(new steer.Vector(75, 85), 75, 6);
                 steer.item.PathInfo.fillSVGPathElement(svgPathElm, pathInfo);
                 var roadPath = steer.item.Creator.createPath({ pathInfo: pathInfo });
                 document.getElementById("svgObj").remove();
-
-                mouseUnit = steer.item.Creator.createUnit({ x: 10, y: 10, radius: 50, maxSpeed: 10, maxForce: 10, dynamic: true });
 
                 //建立 Unit
                 var createPos = [[150, 150], [300, 150], [500, 120], [700, 90], [920, 340], [600, 520]];
@@ -82,13 +88,16 @@
                     var cart = steer.item.Creator.createUnit(
                         {
                             x: createPos[s][0], y: createPos[s][1], radius: 15,
-                            maxSpeed: 10 + (s * 5), maxForce: 5, dynamic: true
+                            maxSpeed: 3 + (s * 1.5), maxForce: 0.1, dynamic: true
                         });
-                    cart.pathVelocityRatio = 0.3;
-                    cart.pathOnFrontRatio = 0.3;
+                    cart.pathVelocityRatio = 2;
+                    cart.pathOnFrontRatio = 2;
                     steer.controls.Behavior.initPathUnit(cart, roadPath, true, true, 3);
                     carts.push(cart);
                     cart.data = movs[s];
+                    if (s == createPos.length - 1) {
+                        cart.maxSpeed = 15 / 30;
+                    }
                 }
 
                 var baseDR = new steer.BaseRender(domain, 1024, 660);
@@ -124,6 +133,7 @@
                     var len = carts.length;
                     while (len--) {
                         carts[len].applyForce(steer.controls.Behavior.followPath(carts[len], roadPath));
+                        carts[len].applyForce(steer.controls.Behavior.avoidUnit(carts[len], carts), 0.1);
                     }
                     domain.update(delta);
                 });
@@ -137,34 +147,16 @@
             loader.load();
 
 
+            document.getElementById("ckPath").addEventListener("change", function (e) {
+                if (document.getElementById("ckPath").checked) {
+                    pixiDR.container.visible = true;
+                    document.getElementById("divBg").style.opacity = "0.2";
+                } else {
+                    pixiDR.container.visible = false;
+                    document.getElementById("divBg").style.opacity = "1";
+                }
+            });
 
-
-        }
-
-
-        //點選或拖曳 時取得 mainView 滑鼠座標
-
-        var mousePt = { x: 0, y: 0 };
-        function mouseMoveCall(e) { mouseUpdate(e); }
-        document.addEventListener("mousedown", function (e) {
-            mouseUpdate(e);
-            document.addEventListener("mousemove", mouseMoveCall);
-        });
-        document.addEventListener("mouseup", function (e) {
-            document.removeEventListener("mousemove", mouseMoveCall);
-        });
-        document.addEventListener("touchstart", mouseUpdate);
-        document.addEventListener("touchmove", mouseUpdate);
-        function mouseUpdate(e) {
-            if (e.changedTouches) {
-                mousePt.x = (e.changedTouches[0].clientX - document.getElementById("mainView").offsetLeft) / 30;
-                mousePt.y = (e.changedTouches[0].clientY - document.getElementById("mainView").offsetTop) / 30;
-            } else if (e.pageX) {
-                mousePt.x = (e.pageX - document.getElementById("mainView").offsetLeft) / 30;
-                mousePt.y = (e.pageY - document.getElementById("mainView").offsetTop) / 30;
-            }
-            if (mouseUnit) mouseUnit.setb2Position(mousePt.x, mousePt.y);
-            e.preventDefault();
         }
 
     </script>

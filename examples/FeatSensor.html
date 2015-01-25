@@ -5,11 +5,10 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <!--<script src="steer.min.js"></script>-->
+    <script src="steer.min.js"></script>
     <script src="controlHelper.js"></script>
-    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="runClassLoader();">
+<body onload="initScene();">
 
     <div id="mainView">
         <div id="divScreen"></div>
@@ -28,8 +27,8 @@
                     <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
                 </div>
                 <div class="uiSet" style="width: 400px;">
-                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
-                    <div id="rangeIntegrateTxt">20 FPS</div>
+                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="  0" />
+                    <div id="rangeIntegrateTxt">30 FPS</div>
                 </div>
             </div>
 
@@ -129,7 +128,7 @@
 
                 newUnit.applyForce(steer.controls.Behavior.arrival(newUnit, mousePt));
 
-                //更新測試座標 
+                //更新測試座標
                 var xto = 200 + Math.cos(addDeg) * 50;
                 cSensorD1.setSteerPosition(xto, 500);
                 pSensorD1.setSteerPosition(750 + Math.sin(addDeg) * 100, 450 + Math.cos(addDeg * 2) * 50);

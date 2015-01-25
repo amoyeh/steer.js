@@ -109,7 +109,6 @@
                 averageVelocity = oldVelocities get average
                 position += averageVelocity * timeDelta;
             */
-            //div30 to fit box2d space
             //this.acceleration.mult(delta);
             //this.velocity.add(this.acceleration).limit(this.maxSpeed);
             //this.addVelocityData(this.velocity.clone());
@@ -118,7 +117,7 @@
             //this.b2body.SetLinearVelocity(averageVelocity.mult(delta).makeB2Vec());
             //this.acceleration.setTo(0, 0);
 
-            //method. 2 velocities average
+            //method. velocities average
             this.acceleration.div(this.mass).mult(delta);
             var oldVelocity: Vector = this.velocity.clone();
             this.addAverageData(this.velocity.clone());

@@ -52,7 +52,7 @@ var steer;
                 return new steer.Vector();
             };
             Behavior.avoidUnit = function (unit, list) {
-                return controls.AvoidControls.avoidUnit2(unit, list);
+                return controls.AvoidControls.avoidUnit(unit, list);
             };
             Behavior.gridmapForce = function (unit, grid) {
                 return controls.PathAreaControls.gridmapForce(unit, grid);

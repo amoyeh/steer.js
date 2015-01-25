@@ -78,6 +78,8 @@
             //create body from bodyDef
             var ballDef: any = new box2d.b2BodyDef();
             ballDef.type = box2d.b2BodyType.b2_staticBody;
+            ballDef.linearDamping = 1000;
+            ballDef.angularDamping = 1000;
             if (cinfo.dynamic) ballDef.type = box2d.b2BodyType.b2_dynamicBody;
             ballDef.position.SetXY(cinfo.x, cinfo.y);
             var b2BodyNew = Creator.domain.b2World.CreateBody(ballDef);
@@ -111,6 +113,8 @@
             //create body from bodyDef
             var ballDef: any = new box2d.b2BodyDef();
             ballDef.type = box2d.b2BodyType.b2_dynamicBody;
+            ballDef.linearDamping = 0;
+            ballDef.angularDamping = 0;
             if (cinfo.dynamic == false) ballDef.type = box2d.b2BodyType.b2_staticBody;
             ballDef.position.SetXY(cinfo.x, cinfo.y);
             ballDef.fixedRotation = true;
@@ -144,6 +148,8 @@
 
             var boxDef: any = new box2d.b2BodyDef();
             boxDef.type = box2d.b2BodyType.b2_staticBody;
+            boxDef.linearDamping = 1000;
+            boxDef.angularDamping = 1000;
             if (cinfo.dynamic) boxDef.type = box2d.b2BodyType.b2_dynamicBody;
 
             var polygonShape = new box2d.b2PolygonShape();
@@ -179,8 +185,6 @@
             fixDef.filter.categoryBits = ItemEntity.FILTER_STATIC | ItemEntity.FILTER_UNIT;
             fixDef.shape = polygonShape;
             b2BodyNew.CreateFixture(fixDef);
-            b2BodyNew.SetAngularDamping(10);
-            b2BodyNew.SetLinearDamping(10);
             var newPolygon: Polygon = new Polygon(b2BodyNew, cinfo.name);
             newPolygon.dynamic = (cinfo.dynamic == true);
             b2BodyNew.SetUserData({ name: newPolygon.name, entity: newPolygon });
@@ -247,6 +251,8 @@
             var bodyDef: any = new box2d.b2BodyDef();
             bodyDef.type = box2d.b2BodyType.b2_staticBody;
             bodyDef.position.SetXY(cinfo.x, cinfo.y);
+            bodyDef.linearDamping = 0;
+            bodyDef.angularDamping = 0;
             var b2BodyNew = Creator.domain.b2World.CreateBody(bodyDef);
 
             //create fixture and add all edge shapes

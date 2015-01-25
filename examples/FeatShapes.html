@@ -5,11 +5,10 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <!--<script src="steer.min.js"></script>-->
+    <script src="steer.min.js"></script>
     <script src="controlHelper.js"></script>
-    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="runClassLoader();">
+<body onload="initScene();">
 
     <div id="mainView">
 
@@ -17,7 +16,11 @@
 
         <div id="controls">
             <div class="rowUis">
-                <div class="uiSet" style="width:400px;">
+                <div class="uiSet" style="width: 240px;">
+                    <div class="toggleTxt">Show RayCast &amp; force</div>
+                    <span class="checkbox"><input id="ckRayCast" type="checkbox" checked><label></label></span>
+                </div>
+                <div class="uiSet" style="width:320px;">
                     <input type="range" class="uiRange" id="rangeFrontRatio" min="1" max="10" step="1" value="4" />
                     <div class="uiRangeTxt" id="rangeFrontRatioTxt">Raycast Front Ratio: 4</div>
                 </div>
@@ -33,8 +36,8 @@
                     <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
                 </div>
                 <div class="uiSet" style="width: 400px;">
-                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
-                    <div id="rangeIntegrateTxt">20 FPS</div>
+                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="30" />
+                    <div id="rangeIntegrateTxt">30 FPS</div>
                 </div>
             </div>
 
@@ -78,7 +81,7 @@
             steer.item.Creator.setDomainReference(domain);
             steer.item.Creator.pixelCreateFormat = true;
             domain.createBox2dDebugDraw("box2dDrawCanvas", box2d.b2DrawFlags.e_none | box2d.b2DrawFlags.e_shapeBit | box2d.b2DrawFlags.e_centerOfMassBit);
-            
+
 
             //UI 變數
             var avoidRatio = 1;
@@ -124,7 +127,7 @@
             var newUnit = steer.item.Creator.createUnit({ x: 500, y: 500, radius: 15, maxForce: 2, maxSpeed: 10, dynamic: true });
             newUnit.rayFrontRatio = 4;
             var ddInfo = steer.render.DebugDrawInfo.create(newUnit);
-            //ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+            ddInfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST | steer.render.DebugDrawInfo.AVOID_FORCE;
 
             var myTimer = new steer.SteerTimer(30);
             myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
@@ -153,7 +156,18 @@
 
             myTimer.start();
 
+
+            //UI setup --------------------------------------------------------------------------------------
             generalControls(myTimer); //in controlHelper.js
+
+            document.getElementById("ckRayCast").addEventListener("change", function (e) {
+                var ddinfo = steer.render.DebugDrawInfo.getInfo(newUnit);
+                if (document.getElementById("ckRayCast").checked) {
+                    ddInfo.drawMask |= (steer.render.DebugDrawInfo.UNIT_RAYCAST | steer.render.DebugDrawInfo.AVOID_FORCE);
+                } else {
+                    ddInfo.drawMask &= ~(steer.render.DebugDrawInfo.UNIT_RAYCAST | steer.render.DebugDrawInfo.AVOID_FORCE);
+                }
+            });
 
             document.getElementById("rangeAvoidancePower").addEventListener("input", function (e) {
                 avoidRatio = e.target.value;

@@ -800,18 +800,31 @@ var steer;
                 this.canCollide = true;
                 this.mass = 1;
                 this.maxSpeed = maxSpeed;
+
                 this.maxForce = maxForce;
                 this.velocity = new steer.Vector(0, 0);
                 this.acceleration = new steer.Vector(0, 0);
                 this.diffPosition = new box2d.b2Vec2(0, 0);
+                this.c_averageVelocity = new steer.Vector();
                 this.separateRadius = this.radius + Unit.UnitSperateGap;
                 this.cohesionRadius = this.alignRadius = this.radius;
+                this.oldVelocities = [];
             }
             Unit.prototype.applyForce = function (force, mult) {
                 if (typeof mult === "undefined") { mult = 1; }
                 if (mult != 1)
                     force.mult(mult);
                 this.acceleration.add(force);
+            };
+
+            Unit.prototype.addAverageData = function (newOne) {
+                if (this.oldVelocities.length > 2)
+                    this.oldVelocities.shift();
+                this.oldVelocities.push(newOne);
+            };
+
+            Unit.prototype.averageVelocity = function () {
+                return this.velocity.clone();
             };
 
             Unit.prototype.update = function (delta) {
@@ -823,6 +836,7 @@ var steer;
 
                 this.acceleration.div(this.mass).mult(delta);
                 var oldVelocity = this.velocity.clone();
+                this.addAverageData(this.velocity.clone());
                 this.velocity.add(this.acceleration).limit(this.maxSpeed);
                 var averageVelocity = this.velocity.clone().add(oldVelocity).div(2);
                 this.b2body.SetAwake(true);
@@ -835,11 +849,12 @@ var steer;
                 var result = [];
                 var atx = this.getb2X();
                 var aty = this.getb2Y();
-                var heading = this.velocity.heading();
+                var avgVelocity = this.averageVelocity();
+                var heading = avgVelocity.heading();
                 var velocityLength = this.c_velocityLength;
 
                 var baseAngle = 0;
-                var speedRatio = (1 - this.velocity.mag() / this.maxSpeed) * 25;
+                var speedRatio = (1 - avgVelocity.mag() / this.maxSpeed) * 25;
                 baseAngle = Math.round(speedRatio + 5);
 
                 var angSideAdd = heading + (steer.MathUtil.ONED * 90);
@@ -894,13 +909,15 @@ var steer;
             };
 
             Unit.prototype.prepareUpdateCache = function () {
-                this.currentRayFront = (this.velocity.mag() * this.rayFrontRatio + this.separateRadius);
+                var avgVelocity = this.averageVelocity();
+                this.currentRayFront = (avgVelocity.mag() * this.rayFrontRatio + this.separateRadius);
                 var minLength = this.separateRadius;
                 var velocityLength = this.currentRayFront;
                 if (velocityLength < minLength)
                     velocityLength = minLength;
                 this.c_velocityLength = velocityLength;
                 this.c_rayInfo = this.getRaycast(true);
+                this.avoidInfo = {};
             };
 
             Unit.prototype.setb2Position = function (x, y) {
@@ -927,7 +944,8 @@ var steer;
                     var lowerV = new box2d.b2Vec2(this.getb2X() - maxRadius, this.getb2Y() - maxRadius);
                     var upperV = new box2d.b2Vec2(this.getb2X() + maxRadius, this.getb2Y() + maxRadius);
                     bodyAABB.Combine1({ lowerBound: lowerV, upperBound: upperV });
-                    if (this.velocity.mag() > 0) {
+
+                    if (this.averageVelocity().mag() > 0) {
                         for (var s = 0; s < rayInfo.length; s += 2) {
                             bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
                             bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
@@ -943,6 +961,7 @@ var steer;
             };
 
             Unit.prototype.resetVelocity = function () {
+                this.oldVelocities = [];
                 this.velocity.setTo(0, 0);
                 this.acceleration.setTo(0, 0);
                 this.b2body.SetLinearVelocity(new box2d.b2Vec2(0, 0));
@@ -1323,16 +1342,16 @@ var steer;
             }
             Sensor.prototype.asForcePushVector = function (force) {
                 this.forceType = Sensor.FORCE_PUSH_VECTOR;
-                this.force = force;
-                this.forceAngle = this.force.heading();
+                this.pushForce = force.clone().mult(0.01);
+                this.forceAngle = this.pushForce.heading();
             };
             Sensor.prototype.asForcePushCenter = function (forceMagnitude) {
                 this.forceType = Sensor.FORCE_PUSH_CENTER;
-                this.forceMagnitude = forceMagnitude;
+                this.forceMagnitude = forceMagnitude * 0.01;
             };
             Sensor.prototype.asForcePullCenter = function (forceMagnitude) {
                 this.forceType = Sensor.FORCE_PULL_CENTER;
-                this.forceMagnitude = forceMagnitude;
+                this.forceMagnitude = forceMagnitude * 0.01;
             };
             Sensor.prototype.asEventSensor = function (eventStart, eventEnd) {
                 this.eventStart = eventStart;
@@ -1345,11 +1364,12 @@ var steer;
                     var unit = this.overLapItems[key];
                     switch (this.forceType) {
                         case Sensor.FORCE_PUSH_VECTOR:
-                            unit.applyForce(steer.Vector.fromAngle(this.force.heading() + this.b2body.GetAngle(), this.force.mag()));
+                            unit.applyForce(steer.Vector.fromAngle(this.pushForce.heading() + this.b2body.GetAngle(), this.pushForce.mag()));
                             break;
                         case Sensor.FORCE_PUSH_CENTER:
                             var angleVec = steer.Vector.sub(unit.getb2Position(), this.getb2Position());
-                            unit.applyForce(angleVec.normalizeThanMult(this.forceMagnitude));
+                            angleVec.normalizeThanMult(this.forceMagnitude);
+                            unit.applyForce(angleVec);
                             break;
                         case Sensor.FORCE_PULL_CENTER:
                             var angleVec = steer.Vector.sub(this.getb2Position(), unit.getb2Position());
@@ -1458,6 +1478,8 @@ var steer;
 
                 var ballDef = new box2d.b2BodyDef();
                 ballDef.type = box2d.b2BodyType.b2_staticBody;
+                ballDef.linearDamping = 1000;
+                ballDef.angularDamping = 1000;
                 if (cinfo.dynamic)
                     ballDef.type = box2d.b2BodyType.b2_dynamicBody;
                 ballDef.position.SetXY(cinfo.x, cinfo.y);
@@ -1492,6 +1514,8 @@ var steer;
 
                 var ballDef = new box2d.b2BodyDef();
                 ballDef.type = box2d.b2BodyType.b2_dynamicBody;
+                ballDef.linearDamping = 0;
+                ballDef.angularDamping = 0;
                 if (cinfo.dynamic == false)
                     ballDef.type = box2d.b2BodyType.b2_staticBody;
                 ballDef.position.SetXY(cinfo.x, cinfo.y);
@@ -1526,6 +1550,8 @@ var steer;
 
                 var boxDef = new box2d.b2BodyDef();
                 boxDef.type = box2d.b2BodyType.b2_staticBody;
+                boxDef.linearDamping = 1000;
+                boxDef.angularDamping = 1000;
                 if (cinfo.dynamic)
                     boxDef.type = box2d.b2BodyType.b2_dynamicBody;
 
@@ -1560,8 +1586,6 @@ var steer;
                 fixDef.filter.categoryBits = item.ItemEntity.FILTER_STATIC | item.ItemEntity.FILTER_UNIT;
                 fixDef.shape = polygonShape;
                 b2BodyNew.CreateFixture(fixDef);
-                b2BodyNew.SetAngularDamping(10);
-                b2BodyNew.SetLinearDamping(10);
                 var newPolygon = new item.Polygon(b2BodyNew, cinfo.name);
                 newPolygon.dynamic = (cinfo.dynamic == true);
                 b2BodyNew.SetUserData({ name: newPolygon.name, entity: newPolygon });
@@ -1622,6 +1646,8 @@ var steer;
                 var bodyDef = new box2d.b2BodyDef();
                 bodyDef.type = box2d.b2BodyType.b2_staticBody;
                 bodyDef.position.SetXY(cinfo.x, cinfo.y);
+                bodyDef.linearDamping = 0;
+                bodyDef.angularDamping = 0;
                 var b2BodyNew = Creator.domain.b2World.CreateBody(bodyDef);
 
                 var fixDef = Creator.createFixtureDef();
@@ -2255,33 +2281,35 @@ var steer;
             };
 
             BasicControls.pursuit = function (unit, target) {
-                var targetFuture = target.getb2Position().clone();
-                var targetSpeed = target.velocity.clone();
-                targetFuture.add(targetSpeed);
-                return BasicControls.seek(unit, targetFuture);
+                var offset = steer.Vector.sub(target.getb2Position(), unit.getb2Position());
+                var distanceDelta = offset.mag() / target.maxSpeed;
+                var targetVelAvg = target.averageVelocity().mult(distanceDelta);
+                var futureAt = target.getb2Position().add(targetVelAvg);
+                return BasicControls.seek(unit, futureAt);
             };
 
             BasicControls.evade = function (unit, target) {
-                var targetFuture = target.getb2Position().clone();
-                var targetSpeed = target.velocity.clone();
-                targetFuture.add(targetSpeed);
-                return BasicControls.flee(unit, targetFuture);
+                var offset = steer.Vector.sub(target.getb2Position(), unit.getb2Position());
+                var distanceDelta = offset.mag() / target.maxSpeed;
+                var targetVelAvg = target.averageVelocity().mult(distanceDelta);
+                var futureAt = target.getb2Position().add(targetVelAvg);
+                return BasicControls.flee(unit, futureAt);
             };
 
-            BasicControls.arrive = function (unit, vector) {
-                var desired = steer.Vector.sub(vector, unit.getb2Position());
-                var distance = desired.mag();
-
-                var slowDownRange = unit.maxSpeed * 2;
-                desired.normalize();
-                if (distance < slowDownRange) {
-                    var multValue = steer.MathUtil.map(distance, 0, slowDownRange, 0, unit.maxSpeed);
-                    desired.mult(multValue);
+            BasicControls.arrival = function (unit, vector, slowDownRatio) {
+                if (typeof slowDownRatio === "undefined") { slowDownRatio = 2; }
+                var offset = steer.Vector.sub(vector, unit.getb2Position());
+                var distance = offset.mag();
+                if (distance < unit.maxSpeed * slowDownRatio) {
+                    var mapValue = steer.MathUtil.map(distance, 0, unit.maxSpeed * slowDownRatio, 0, unit.maxSpeed);
+                    if (Math.abs(mapValue) < 0.01)
+                        mapValue = 0;
+                    offset.normalize().mult(mapValue);
                 } else {
-                    desired.mult(unit.maxSpeed);
+                    offset.normalize().mult(unit.maxSpeed);
                 }
-                var steerVec = steer.Vector.sub(desired, unit.velocity).limit(unit.maxForce);
-                return steerVec;
+                var dest = steer.Vector.sub(offset, unit.velocity).limit(unit.maxForce).div(30);
+                return dest;
             };
 
             BasicControls.separation = function (unit, list) {
@@ -2325,7 +2353,7 @@ var steer;
                 }
                 if (count > 0) {
                     sum.div(count).normalizeThanMult(unit.maxSpeed);
-                    sum.sub(unit.velocity).limit(unit.maxForce);
+                    sum.limit(unit.maxForce);
                 }
                 return sum;
             };
@@ -2399,6 +2427,7 @@ var steer;
                 var shortestNormal;
                 var shortestFixture;
                 var rayPtS, rayPtE;
+                var ddinfo = steer.render.DebugDrawInfo.getInfo(unit);
 
                 if (hitCallbacks.length > 0) {
                     var shortestDist = 10000000;
@@ -2414,6 +2443,13 @@ var steer;
                         }
                     }
 
+                    if (ddinfo) {
+                        if (ddinfo.drawMask & steer.render.DebugDrawInfo.AVOID_FORCE) {
+                            ddinfo.avoidColor = 0xCC6666;
+                            ddinfo.avoidHitLoc = steer.Vector.fromb2Vec(shortestPt).sub(unit.getb2Position());
+                        }
+                    }
+
                     if (shortestFixture.GetType() == box2d.b2ShapeType.e_circleShape) {
                         var checkRange = unit.maxSpeed * unit.rayFrontRatio;
                         var distanceHitToUnit = checkRange - steer.Vector.distance(shortestPt, unit.getb2Position());
@@ -2424,111 +2460,141 @@ var steer;
 
                             var awayForce = checkRange - (checkRange - distanceHitToUnit);
                             var bounceAng = steer.Vector.sub(futureppt, steer.Vector.fromb2Vec(circlePos)).heading();
-                            var resultForce = steer.Vector.fromAngle(bounceAng).mult(awayForce);
 
+                            var resultForce = steer.Vector.fromAngle(bounceAng).mult(awayForce * 0.02);
+                            if (ddinfo) {
+                                if (ddinfo.drawMask & steer.render.DebugDrawInfo.AVOID_FORCE) {
+                                    ddinfo.avoidColor = 0xCC6666;
+                                    ddinfo.avoidForce = resultForce.clone().mult(100);
+                                }
+                            }
                             return resultForce;
                         }
 
                         return new steer.Vector();
                     } else {
                         var normalHeading = -Math.atan2(-shortestNormal.y, shortestNormal.x);
-                        var bounceAng = normalHeading * 2 - Math.PI - unit.velocity.heading();
+                        var bounceAng = normalHeading * 2 - Math.PI - unit.averageVelocity().heading();
                         var distToObstacle = steer.Vector.distance(shortestPt, unit.getb2Position());
                         var awayForce = unit.c_velocityLength - distToObstacle;
 
-                        var resultForce = steer.Vector.fromAngle(bounceAng).mult(awayForce);
+                        var resultForce = steer.Vector.fromAngle(bounceAng).mult(awayForce * 0.01);
 
+                        if (ddinfo) {
+                            if (ddinfo.drawMask & steer.render.DebugDrawInfo.AVOID_FORCE) {
+                                ddinfo.avoidColor = 0xCC6666;
+                                ddinfo.avoidForce = resultForce.clone().mult(100);
+                            }
+                        }
                         return resultForce;
                     }
                 }
+                if (ddinfo) {
+                    ddinfo.avoidForce = null;
+                    ddinfo.avoidHitLoc = null;
+                }
+                console.log("no");
                 return new steer.Vector();
             };
 
             AvoidControls.avoidUnit = function (unit, list) {
                 var len = list.length;
                 var threat;
-                var unitHitLocation;
-                var threatHitLocation;
+                var unitHitAt;
+                var threatHitAt;
                 var closestDist = Number.MAX_VALUE;
+                var resultVec = new steer.Vector();
+                var closestFutureHit;
+                var ddinfo = steer.render.DebugDrawInfo.getInfo(unit);
                 for (var s = 0; s < len; s++) {
                     if ((unit !== list[s]) && (list[s] instanceof steer.item.Unit)) {
-                        var hitDist = AvoidControls.predictFutureHitDist(unit, list[s]);
+                        var other = list[s];
+                        var realDist = unit.getb2Position().dist(other.getb2Position());
+                        if (realDist < closestDist) {
+                            closestDist = realDist;
+                            var checkDist = (unit.radius + other.radius) * 10;
+                            var hitDist = AvoidControls.predictFutureHitDist(unit, other);
+                            closestFutureHit = hitDist;
 
-                        var velocityCheckDist = (unit.c_velocityLength + list[s].c_velocityLength);
-                        if (velocityCheckDist < 3)
-                            velocityCheckDist = 3;
-                        if ((hitDist > 0) && (hitDist < velocityCheckDist)) {
-                            var collisionDangerThreshold = velocityCheckDist;
-                            var compareResult = AvoidControls.computeFutureHitPos(unit, list[s], hitDist);
-                            if (compareResult.distance < collisionDangerThreshold) {
-                                if (hitDist < closestDist) {
-                                    closestDist = hitDist;
-                                    threat = list[s];
-                                    unitHitLocation = compareResult.unitLoc;
-                                    threatHitLocation = compareResult.otherLoc;
-                                }
+                            if (((hitDist > 0) && (hitDist < checkDist))) {
+                                var unitTravel = steer.Vector.mult(unit.averageVelocity(), hitDist);
+                                var otherTravel = steer.Vector.mult(other.averageVelocity(), hitDist);
+                                var unitFrontAdd = unit.averageVelocity().clone().normalizeThanMult(unit.radius);
+                                var otherFrontAdd = other.averageVelocity().clone().normalizeThanMult(other.radius);
+                                unitHitAt = unit.getb2Position().add(unitTravel).add(unitFrontAdd);
+                                threatHitAt = other.getb2Position().add(otherTravel).add(otherFrontAdd);
+                                threat = other;
                             }
                         }
                     }
                 }
-                var ddinfo = steer.render.DebugDrawInfo.getInfo(unit);
-                var resultVec = new steer.Vector();
-                var unitNormal = unit.velocity.clone().normalize();
-                var sideVec = steer.Vector.fromAngle((unitNormal.heading() + (Math.PI * 0.5)));
-                if (threat != null) {
-                    var threatNormal = threat.velocity.clone().normalize();
 
-                    var parallelness = unitNormal.dot(threatNormal);
+                if (threat != null) {
+                    var checkDistRatio = (unit.radius + other.radius + unit.c_velocityLength + other.c_velocityLength) * .5;
+                    var threatNormal = threat.averageVelocity().clone().normalize();
+                    var unitNormal = unit.averageVelocity().clone().normalize();
+
                     var angle = 0.707;
+
+                    var sideVec = steer.Vector.fromAngle((unitNormal.heading() + (Math.PI * 0.5)));
+                    var parallelness = unitNormal.dot(threatNormal);
+
                     if (parallelness < -angle) {
-                        if (threatHitLocation.clone().sub(unit.getb2Position()).mag() <= ((unit.c_velocityLength + threat.c_velocityLength) * .4)) {
-                            var offset = steer.Vector.sub(threatHitLocation, unit.getb2Position());
+                        if (threatHitAt.clone().sub(unit.getb2Position()).mag() <= checkDistRatio) {
+                            var offset = steer.Vector.sub(threatHitAt, unit.getb2Position());
                             var sideDot = offset.dot(sideVec);
                             resultVec = sideVec;
-                        }
-
-                        if (ddinfo) {
-                            ddinfo.avoidColor = steer.render.DebugColors.DC_AVOID_FRONT;
-                            ddinfo.avoidForce = resultVec.clone();
-                            ddinfo.avoidHitLoc = threatHitLocation.clone().sub(unit.getb2Position());
+                            if (ddinfo) {
+                                ddinfo.avoidColor = steer.render.DebugColors.DC_AVOID_FRONT;
+                                ddinfo.avoidForce = resultVec.clone();
+                                ddinfo.avoidHitLoc = threatHitAt.clone().sub(unit.getb2Position());
+                            }
                         }
                     } else {
                         if (parallelness > angle) {
-                            var unitToDist = unit.getb2Position().distSq(unitHitLocation);
-                            var threatToDist = threat.getb2Position().distSq(unitHitLocation);
-                            if (unitToDist > threatToDist) {
-                                var offset = steer.Vector.sub(unitHitLocation, unit.getb2Position());
-                                var angleBetween = offset.dot(sideVec);
+                            if (threatHitAt.clone().sub(unit.getb2Position()).mag() <= checkDistRatio) {
+                                var unitToDist = unit.getb2Position().dist(unitHitAt);
+                                var threatToDist = threat.getb2Position().dist(unitHitAt);
 
-                                resultVec = steer.Vector.fromAngle((unitNormal.heading() + (Math.PI * 1.2)));
-                                if (angleBetween > 0)
-                                    resultVec = steer.Vector.fromAngle((unitNormal.heading() - (Math.PI * 1.2)));
-                                if (ddinfo) {
-                                    ddinfo.avoidColor = steer.render.DebugColors.DC_AVOID_PARALLEL;
-                                    ddinfo.avoidForce = resultVec.clone();
-                                    ddinfo.avoidHitLoc = threatHitLocation.clone().sub(unit.getb2Position());
+                                if (unitToDist >= threatToDist) {
+                                    if (!unit.avoidInfo.parallelAvoid) {
+                                        unit.avoidInfo.parallelAvoid = threat.avoidInfo.parallelAvoid = true;
+
+                                        var utDist = unit.getb2Position().dist(unitHitAt);
+                                        var ttDist = threat.getb2Position().dist(unitHitAt);
+                                        if (utDist > ttDist) {
+                                            var offset = steer.Vector.sub(threat.getb2Position(), unit.getb2Position());
+                                            var angleBetween = offset.dot(sideVec);
+                                            sideVec = steer.Vector.fromAngle((unitNormal.heading() + (Math.PI * 1)));
+                                            if (angleBetween > 0)
+                                                sideVec = steer.Vector.fromAngle((unitNormal.heading() - (Math.PI * 1)));
+                                        }
+                                        if (ddinfo) {
+                                            ddinfo.avoidColor = steer.render.DebugColors.DC_AVOID_PARALLEL;
+                                            ddinfo.avoidForce = resultVec.clone();
+                                            ddinfo.avoidHitLoc = threatHitAt.clone().sub(unit.getb2Position());
+                                        }
+                                        resultVec = sideVec;
+                                    }
                                 }
                             }
                         } else {
-                            var hitLoc = null;
-                            var lineCirHit = steer.MathUtil.intersectCircleLine(unit.getb2Position(), unit.c_rayInfo[5], threat.getb2Position(), threat.radius);
-                            if (lineCirHit.hit) {
-                                hitLoc = lineCirHit.data[0];
-                            } else {
-                                var lineHit = steer.MathUtil.intersectLineLine(unit.getb2Position(), unit.c_rayInfo[5], threat.getb2Position(), threat.c_rayInfo[5]);
-                                if (lineHit.hit) {
-                                    hitLoc = lineHit.data[0];
-                                }
-                            }
-                            if (hitLoc) {
-                                if (hitLoc.clone().sub(unit.getb2Position()).mag() < (unit.velocity.mag() * 4)) {
-                                    if (steer.Vector.distanceSq(unit.getb2Position(), hitLoc) >= steer.Vector.distanceSq(threat.getb2Position(), hitLoc)) {
-                                        resultVec = steer.Vector.fromAngle((unitNormal.heading() + (Math.PI * 1)));
-                                        resultVec.mult(2);
+                            if (threatHitAt.clone().sub(unit.getb2Position()).mag() <= checkDistRatio) {
+                                var unitToDist = unit.getb2Position().dist(threatHitAt);
+                                var threatToDist = threat.getb2Position().dist(unitHitAt);
+
+                                if (unitToDist >= threatToDist) {
+                                    if (!unit.avoidInfo.parallelAvoid) {
+                                        unit.avoidInfo.parallelAvoid = threat.avoidInfo.parallelAvoid = true;
+
+                                        var hitDirVector = threatHitAt.clone().sub(unit.getb2Position());
+                                        var rayDirVector = unit.c_rayInfo[5].clone().sub(unit.c_rayInfo[4]);
+                                        var offDeg = steer.Vector.angleBetween(hitDirVector, rayDirVector) * 4;
+                                        resultVec = steer.Vector.fromAngle((unitNormal.heading() + (Math.PI - offDeg)));
                                         if (ddinfo) {
                                             ddinfo.avoidColor = steer.render.DebugColors.DC_AVOID_SIDE;
                                             ddinfo.avoidForce = resultVec.clone();
-                                            ddinfo.avoidHitLoc = threatHitLocation.clone().sub(unit.getb2Position());
+                                            ddinfo.avoidHitLoc = threatHitAt.clone().sub(unit.getb2Position());
                                         }
                                     }
                                 }
@@ -2536,34 +2602,28 @@ var steer;
                         }
                     }
                 }
-                resultVec.div(2);
                 if (resultVec.isZero()) {
                     if (ddinfo) {
                         ddinfo.avoidForce = null;
                         ddinfo.avoidHitLoc = null;
                     }
                 }
-                return resultVec;
+                return resultVec.div(200);
             };
 
             AvoidControls.predictFutureHitDist = function (unit, other) {
-                var relVelocity = steer.Vector.sub(other.velocity, unit.velocity);
+                var relVelocity = steer.Vector.sub(other.averageVelocity(), unit.averageVelocity());
                 var relSpeed = relVelocity.mag();
 
                 if (relSpeed == 0)
                     return 0;
                 var relTangent = steer.Vector.div(relVelocity, relSpeed);
-                var relLocation = steer.Vector.sub(unit.getb2Position(), other.getb2Position());
-                var projection = relTangent.dot(relLocation);
-                return projection / relSpeed;
-            };
+                var unitFrontAdd = unit.averageVelocity().clone().normalizeThanMult(unit.radius);
+                var otherFrontAdd = other.averageVelocity().clone().normalizeThanMult(other.radius);
+                var relLocation = steer.Vector.sub(unit.getb2Position().add(unitFrontAdd), other.getb2Position().add(otherFrontAdd));
 
-            AvoidControls.computeFutureHitPos = function (unit, other, relDist) {
-                var unitTravel = steer.Vector.mult(unit.velocity, relDist);
-                var otherTravel = steer.Vector.mult(other.velocity, relDist);
-                var unitFinal = steer.Vector.add(unit.getb2Position(), unitTravel);
-                var otherFinal = steer.Vector.add(other.getb2Position(), otherTravel);
-                return { unitLoc: unitFinal, otherLoc: otherFinal, distance: steer.Vector.distance(unit.getb2Position(), other.getb2Position()) };
+                var projection = relTangent.dot(relLocation);
+                return (projection / relSpeed);
             };
             return AvoidControls;
         })();
@@ -2603,7 +2663,7 @@ var steer;
             PathAreaControls.followPath = function (unit, path) {
                 if (unit.pathAtIndex + 1 >= path.segments.length && unit.loopOnPath == false) {
                     var lastPathPoint = path.segments[path.segments.length - 1];
-                    return controls.Behavior.arrive(unit, lastPathPoint);
+                    return controls.Behavior.arrival(unit, lastPathPoint);
                 }
 
                 var ddinfo = steer.render.DebugDrawInfo.getInfo(unit);
@@ -2757,8 +2817,9 @@ var steer;
                 return controls.BasicControls.evade(unit, target);
             };
 
-            Behavior.arrive = function (unit, vector) {
-                return controls.BasicControls.arrive(unit, vector);
+            Behavior.arrival = function (unit, vector, slowDownRatio) {
+                if (typeof slowDownRatio === "undefined") { slowDownRatio = 2; }
+                return controls.BasicControls.arrival(unit, vector, slowDownRatio);
             };
 
             Behavior.separation = function (unit, list) {
@@ -2832,8 +2893,8 @@ var steer;
             DebugColors.DC_PATH_FILL_SA = 0.4;
             DebugColors.DC_PATH_FILL_A = 0.1;
             DebugColors.DC_PATH_GUIDE = 0x33FFFF;
-            DebugColors.DC_PATH_GUIDE_A = 0.2;
-            DebugColors.DC_PATH_GUIDE_A2 = 0.05;
+            DebugColors.DC_PATH_GUIDE_A = 0.3;
+            DebugColors.DC_PATH_GUIDE_A2 = 0.2;
 
             DebugColors.DC_WANDER = 0x969696;
             DebugColors.DC_WANDER_A = 0.5;
@@ -3099,11 +3160,13 @@ var steer;
                 g.lineStyle(0.03, render.DebugColors.DC_RAYCAST, render.DebugColors.DC_RAYCAST_A);
                 if (ddinfo.drawMask & render.DebugDrawInfo.UNIT_RAYCAST) {
                     var rayPts = item.c_rayInfo;
-                    for (var s = 0; s < rayPts.length; s += 2) {
-                        var ix = item.getb2X();
-                        var iy = item.getb2Y();
-                        g.moveTo(rayPts[s].x - ix - 0.5, rayPts[s].y - iy - 0.5);
-                        g.lineTo(rayPts[s + 1].x - ix - 0.5, rayPts[s + 1].y - iy - 0.5);
+                    if (item.c_velocityLength >= 0.8) {
+                        for (var s = 0; s < rayPts.length; s += 2) {
+                            var ix = item.getb2X();
+                            var iy = item.getb2Y();
+                            g.moveTo(rayPts[s].x - ix - 0.5, rayPts[s].y - iy - 0.5);
+                            g.lineTo(rayPts[s + 1].x - ix - 0.5, rayPts[s + 1].y - iy - 0.5);
+                        }
                     }
                 }
                 if (ddinfo.drawMask & render.DebugDrawInfo.UNIT_SEPARATION) {
@@ -3132,15 +3195,15 @@ var steer;
                 }
                 if (ddinfo.drawMask & render.DebugDrawInfo.UNIT_PATH_INFO) {
                     if (ddinfo.pathPredict) {
-                        g.lineStyle(0.03, render.DebugColors.DC_PATH_GUIDE, render.DebugColors.DC_PATH_GUIDE_A);
+                        g.lineStyle(0.05, render.DebugColors.DC_PATH_GUIDE, render.DebugColors.DC_PATH_GUIDE_A);
                         g.drawCircle(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5, 0.05);
                         g.drawCircle(ddinfo.pathNormal.x - .5, ddinfo.pathNormal.y - .5, 0.05);
                         g.moveTo(-.5, -.5);
                         g.lineTo(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5);
                         g.lineTo(ddinfo.pathNormal.x - .5, ddinfo.pathNormal.y - .5);
 
-                        g.moveTo(-.5, -.5);
-                        g.lineStyle(0.15, render.DebugColors.DC_PATH_GUIDE, render.DebugColors.DC_PATH_GUIDE_A2);
+                        g.drawCircle(ddinfo.pathOnFront.x - .5, ddinfo.pathOnFront.y - .5, 0.1);
+                        g.moveTo(ddinfo.pathPredict.x - .5, ddinfo.pathPredict.y - .5);
                         g.lineTo(ddinfo.pathOnFront.x - .5, ddinfo.pathOnFront.y - .5);
                     }
                 }

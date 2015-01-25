@@ -6,11 +6,10 @@
     <!-- 載入 box2d, pixi and steer 依下列順序 -->
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
-    <!--<script src="steer.min.js"></script>-->
+    <script src="steer.min.js"></script>
     <script src="controlHelper.js"></script>
-    <script src="../src/ClassLoader.js"></script>
 </head>
-<body onload="runClassLoader();">
+<body onload="initScene();">
 
     <div id="mainView">
         <div id="divScreen"></div>
@@ -82,7 +81,7 @@
             }
             var borders = steer.item.Creator.createPolygonBorder(borderInfo);
 
-            var myTimer = new steer.SteerTimer(60);
+            var myTimer = new steer.SteerTimer(30);
             myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
                 var delta = e.values.delta;
                 domain.preUpdate();

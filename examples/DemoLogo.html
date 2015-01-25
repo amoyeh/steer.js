@@ -6,7 +6,6 @@
     <script src="box2d.js"></script>
     <script src="pixi.js"></script>
     <script src="steer.min.js"></script>
-    <!--<script src="../src/ClassLoader.js"></script>-->
     <script src="controlHelper.js"></script>
 </head>
 <body onload="initScene();">
@@ -98,13 +97,13 @@
                     unitInfo.x = xto + steer.MathUtil.range(-50, 50);
                     unitInfo.y = yto + steer.MathUtil.range(-50, 50);
                 }
-                unitInfo.radius = 12;
-                unitInfo.maxSpeed = steer.MathUtil.range(30, 40);
-                unitInfo.maxForce = 9;
+                unitInfo.radius = 10;
+                unitInfo.maxSpeed = steer.MathUtil.range(5, 8);
+                unitInfo.maxForce = 8;
                 var newUnit = steer.item.Creator.createUnit(unitInfo);
                 toArray.push(newUnit);
-                newUnit.pathVelocityRatio = 0.1;
-                newUnit.pathOnFrontRatio = 0.1;
+                newUnit.pathVelocityRatio = 1;
+                newUnit.pathOnFrontRatio = 1;
                 steer.controls.Behavior.initPathUnit(newUnit, toPath, true, true, 1);
                 var light = new PIXI.Sprite(texture);
                 lightContainer.addChild(light);
@@ -112,7 +111,7 @@
             }
             var unitsSteer = [], unitsE1 = [], unitsE2 = [], unitsDot1 = [], unitsDot2 = [], unitsJ = [], unitsJC = [], unitsS = [];
             var steerAmt = 600;
-            var EAmt = 40;
+            var EAmt = 30;
             var JAmt = 150;
             var JCAmt = 50;
             var SAmt = 150;
@@ -157,7 +156,7 @@
                 createAUnit(unitsS, pathS, t, xto, yto);
             }
 
-            var myTimer = new steer.SteerTimer(20);
+            var myTimer = new steer.SteerTimer(30);
             var diffSum = 0;
             var diffCount = 0;
 

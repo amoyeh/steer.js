@@ -80,8 +80,7 @@
         }
 
         static avoidUnit(unit: item.Unit, list: item.Unit[]): Vector {
-            //return AvoidControls.avoidUnit(unit, list);
-            return AvoidControls.avoidUnit2(unit, list);
+            return AvoidControls.avoidUnit(unit, list);
         }
 
 

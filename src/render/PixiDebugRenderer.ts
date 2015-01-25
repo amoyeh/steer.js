@@ -178,7 +178,7 @@
             g.lineStyle(0.03, DebugColors.DC_RAYCAST, DebugColors.DC_RAYCAST_A);
             if (ddinfo.drawMask & DebugDrawInfo.UNIT_RAYCAST) {
                 var rayPts: steer.Vector[] = item.c_rayInfo;
-                if (item.c_velocityLength > 0.7) {
+                if (item.c_velocityLength >= 0.8) {
                     for (var s: number = 0; s < rayPts.length; s += 2) {
                         var ix: number = item.getb2X();
                         var iy: number = item.getb2Y();
