@@ -1,7 +1,7 @@
 #steer.js
 <br/>
-An open source steering behavior library for javascript. 
-It supports various moving behaviors that makes objects moving intelligently, and is commonly practiced in the study of artificial intelligence.
+An open source steering behavior library for javascript, 
+supports various moving behaviors that makes objects moving intelligently. and is commonly studied in the field of artificial intelligence.
 
 <a target="_blank" style="border-bottom:1px dotted;" href="http://www.codelab.tw/steerjs/">offical website (feature upcoming three.js rendering)</a>
 
