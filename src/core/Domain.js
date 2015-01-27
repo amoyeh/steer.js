@@ -118,9 +118,14 @@ var steer;
             if (this.selector) {
                 this.selector.clear();
                 this.items.each(function (item) {
-                    var itemSelector = _this.selector.getItemSelector(item);
-                    if (itemSelector)
-                        _this.selector.insert(itemSelector);
+                    if (item["b2body"] != null) {
+                        var entity = item;
+                        var itemSelector = _this.selector.getItemSelector(item);
+                        if (itemSelector) {
+                            _this.selector.insert(itemSelector);
+                            entity.selector = itemSelector;
+                        }
+                    }
                 });
             }
             if (this.selector) {

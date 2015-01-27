@@ -1,0 +1,173 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.Default.props" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.Default.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <ProjectGuid>{B3C1D0A4-8596-495F-82DA-752FA9299CD7}</ProjectGuid>
+    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <OutputPath>bin</OutputPath>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <TypeScriptToolsVersion>1.1</TypeScriptToolsVersion>
+    <UseIISExpress>true</UseIISExpress>
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="examples\BasicArrival.html" />
+    <Content Include="examples\BasicFleeEvade.html" />
+    <Content Include="examples\BasicPursuit.html" />
+    <Content Include="examples\BasicSetup.html" />
+    <Content Include="examples\box2d.js" />
+    <Content Include="examples\controlHelper.js" />
+    <Content Include="examples\DemoKart.html" />
+    <Content Include="examples\DemoLogo.html" />
+    <Content Include="examples\FeatFlocking.html" />
+    <Content Include="examples\GuideGridmap.html" />
+    <Content Include="examples\GuideGridPath.html" />
+    <Content Include="examples\FeatPath.html" />
+    <Content Include="examples\bootstrap.min.css" />
+    <Content Include="examples\FeatSensor.html" />
+    <Content Include="examples\FeatShapes.html" />
+    <Content Include="examples\FeatUnitAvoid.html" />
+    <Content Include="examples\GuideQuadtree.html" />
+    <Content Include="examples\index.html" />
+    <Content Include="examples\pathfinding.js" />
+    <Content Include="examples\pixi.js" />
+    <Content Include="examples\BasicSeek.html" />
+    <Content Include="examples\FeatIntegrate.html" />
+    <Content Include="examples\BasicRandom.html" />
+    <Content Include="examples\steer.min.js" />
+    <Content Include="examples\styles.css" />
+    <Content Include="examples\three.min.js" />
+    <Content Include="src\box2d.js" />
+    <Content Include="src\ClassTool.js" />
+    <Content Include="src\DebugDraw.js" />
+    <Content Include="src\pathfinding.js" />
+    <Content Include="src\pixi.js" />
+    <Content Include="src\three.min.js" />
+    <Content Include="testbase\core.css" />
+    <Content Include="testbase\testBezier.html" />
+    <Content Include="testbase\testSvg.html" />
+    <Content Include="testpixi\01.pixiInit.html" />
+    <Content Include="testpixi\02.testBehavior.html" />
+    <Content Include="testpixi\03.testBoid.html" />
+    <Content Include="testpixi\04.testWander.html" />
+    <Content Include="testpixi\05.avoidance.html" />
+    <Content Include="testpixi\06.bezierPath.html" />
+    <Content Include="testpixi\07.sensor.html" />
+    <Content Include="testpixi\08.unaligned.html" />
+    <Content Include="testpixi\09.quadtree.html" />
+    <Content Include="testpixi\10.gridmap.html" />
+    <Content Include="testpixi\core.css" />
+    <Content Include="testpixi\steer.min.js" />
+    <Content Include="testtj\01.testTJInit.html" />
+    <Content Include="testtj\core.css" />
+    <Content Include="web.config" />
+    <Content Include="_doc\controls.js" />
+    <Content Include="_doc\domain_timer.js" />
+    <Content Include="_doc\item_createinfo_unit.js" />
+    <Content Include="_doc\render.js" />
+    <Content Include="_doc\shape_path_quad_sensor.js" />
+    <Content Include="_doc\mathutil_vector.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <TypeScriptCompile Include="dts\box2d.d.ts" />
+    <TypeScriptCompile Include="dts\extra.d.ts" />
+    <TypeScriptCompile Include="dts\greensock.d.ts" />
+    <TypeScriptCompile Include="dts\history.d.ts" />
+    <TypeScriptCompile Include="dts\jquery.d.ts" />
+    <TypeScriptCompile Include="dts\PF.d.ts" />
+    <TypeScriptCompile Include="dts\pixi.d.ts" />
+    <TypeScriptCompile Include="dts\three.d.ts" />
+    <TypeScriptCompile Include="src\ClassLoader.ts" />
+    <TypeScriptCompile Include="src\controls\AvoidControls.ts" />
+    <TypeScriptCompile Include="src\controls\BasicControls.ts" />
+    <TypeScriptCompile Include="src\controls\Behavior.ts" />
+    <TypeScriptCompile Include="src\controls\PathAreaControl.ts" />
+    <TypeScriptCompile Include="src\core\ContactManager.ts" />
+    <TypeScriptCompile Include="src\core\Domain.ts" />
+    <TypeScriptCompile Include="src\core\Event.ts" />
+    <TypeScriptCompile Include="src\item\BezierPath.ts" />
+    <TypeScriptCompile Include="src\item\Circle.ts" />
+    <TypeScriptCompile Include="src\item\Creator.ts" />
+    <TypeScriptCompile Include="src\item\Edge.ts" />
+    <TypeScriptCompile Include="src\item\GridMap.ts" />
+    <TypeScriptCompile Include="src\item\ItemContainer.ts" />
+    <TypeScriptCompile Include="src\core\MathUtil.ts" />
+    <TypeScriptCompile Include="src\core\SteerTimer.ts" />
+    <TypeScriptCompile Include="src\core\Vector.ts" />
+    <TypeScriptCompile Include="src\item\Polygon.ts" />
+    <TypeScriptCompile Include="src\item\Quad.ts" />
+    <TypeScriptCompile Include="src\item\Sensor.ts" />
+    <TypeScriptCompile Include="src\item\Unit.ts" />
+    <TypeScriptCompile Include="src\render\DebugColors.ts" />
+    <TypeScriptCompile Include="src\render\DebugDrawInfo.ts" />
+    <TypeScriptCompile Include="src\render\PixiDebugRenderer.ts" />
+    <TypeScriptCompile Include="src\render\ThreeDebugRender.ts" />
+    <TypeScriptCompile Include="testbase\testBezier.ts" />
+    <TypeScriptCompile Include="testpixi\pixiInit.ts" />
+    <TypeScriptCompile Include="testpixi\testAvoidance.ts" />
+    <TypeScriptCompile Include="testpixi\testBehavior.ts" />
+    <TypeScriptCompile Include="testpixi\testBezierPath.ts" />
+    <TypeScriptCompile Include="testpixi\testBoid.ts" />
+    <TypeScriptCompile Include="testpixi\testCreateRemove.ts" />
+    <TypeScriptCompile Include="testpixi\testGridmap.ts" />
+    <TypeScriptCompile Include="testpixi\testGridPathFinding.ts" />
+    <TypeScriptCompile Include="testpixi\testQuadTree.ts" />
+    <TypeScriptCompile Include="testpixi\testSensor.ts" />
+    <TypeScriptCompile Include="testpixi\testUnaligned.ts" />
+    <TypeScriptCompile Include="testpixi\testWander.ts" />
+    <TypeScriptCompile Include="testtj\testTJInit.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="testpixi\11.gridPathFinding.html" />
+    <Content Include="testpixi\01.createRemove.html" />
+    <None Include="web.Debug.config">
+      <DependentUpon>web.config</DependentUpon>
+    </None>
+    <None Include="web.Release.config">
+      <DependentUpon>web.config</DependentUpon>
+    </None>
+  </ItemGroup>
+  <ItemGroup />
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>steerjs_v2</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\WebApplications\Microsoft.WebApplication.targets" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\WebApplications\Microsoft.WebApplication.targets')" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>1533</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost:1688/</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <TypeScriptRemoveComments>True</TypeScriptRemoveComments>
+    <TypeScriptSourceMap>False</TypeScriptSourceMap>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <TypeScriptRemoveComments>true</TypeScriptRemoveComments>
+    <TypeScriptSourceMap>false</TypeScriptSourceMap>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets')" />
+</Project>

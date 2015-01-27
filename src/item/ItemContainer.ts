@@ -78,6 +78,7 @@
 
         public pixiDebugItem: any;
         public threeDebugItem: any;
+        public selector: QuadSelector;
 
         constructor(b2body: box2d.b2Body, name?: string) {
             super(name);
@@ -157,7 +158,7 @@
 
         public getBoundingBox(): { x: number; y: number; w: number; h: number } {
             if (this.b2body) {
-                var bodyAABB:any = new box2d.b2AABB();
+                var bodyAABB: any = new box2d.b2AABB();
                 bodyAABB.lowerBound = new box2d.b2Vec2(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
                 bodyAABB.upperBound = new box2d.b2Vec2(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
                 for (var f = this.b2body.GetFixtureList(); f; f = f.GetNext()) {
@@ -191,6 +192,7 @@
             }
             if (this.threeDebugItem) {
             }
+            this.selector = undefined;
             this.domain = undefined;
         }
 

@@ -15,10 +15,12 @@ var steer;
             this.logicTicker = null;
         }
         SteerTimer.prototype.start = function () {
-            this.accumulateLogicTime = 0;
-            this.lastLogicUpdate = Date.now();
-            this.LogicPerMsec = Math.round(1000 / this.TPS);
-            this.logicIntervalUpdate();
+            if (!this.isRunning()) {
+                this.accumulateLogicTime = 0;
+                this.lastLogicUpdate = Date.now();
+                this.LogicPerMsec = Math.round(1000 / this.TPS);
+                this.logicIntervalUpdate();
+            }
         };
         SteerTimer.prototype.updateTPS = function (value) {
             this.stop();

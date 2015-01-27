@@ -68,18 +68,21 @@ var steer;
                 return QuadNode.PARENT;
             };
             QuadNode.prototype.insert = function (item) {
-                var i;
+                var dirType;
                 if (this.nodes.length > 0) {
-                    i = this.findInsertNode(item);
-                    if (i === QuadNode.PARENT) {
+                    dirType = this.findInsertNode(item);
+                    if (dirType === QuadNode.PARENT) {
                         this.items.push(item);
+                        item.parent = this;
                     }
                     else {
-                        this.nodes[i].insert(item);
+                        this.nodes[dirType].insert(item);
+                        item.parent = this.nodes[dirType];
                     }
                 }
                 else {
                     this.items.push(item);
+                    item.parent = this;
                     if (this.items.length > this.maxChildren && this.depth < this.maxDepth) {
                         this.divide();
                     }
@@ -154,32 +157,14 @@ var steer;
                 }
                 return result;
             };
-            QuadTree.prototype.quadTreeSelect = function (item, optimizeDist) {
-                if (optimizeDist === void 0) { optimizeDist = false; }
+            QuadTree.prototype.quadTreeSelect = function (item) {
                 var result = [];
-                var selector = this.getItemSelector(item);
-                if (selector) {
-                    if (optimizeDist) {
-                        var bbox = item.getBoundingBox();
-                        var bp = new steer.Vector(bbox.x + bbox.w * .5, bbox.y + bbox.h * .5);
-                        var blen = (bbox.w + bbox.h) * 2;
+                var useSelector = item.selector;
+                this.retrieve(useSelector, function (itemFound) {
+                    if (itemFound.data != item) {
+                        result.push(itemFound);
                     }
-                    this.retrieve(selector, function (itemFound) {
-                        if (itemFound.data != item) {
-                            if (optimizeDist) {
-                                var cx = itemFound.x + itemFound.width * .5;
-                                var cy = itemFound.y + itemFound.height * .5;
-                                if (steer.Vector.distanceSq(bp, new steer.Vector(cx, cy)) < (blen * blen)) {
-                                    steer.render.PixiDebugRenderer.instance.drawDot(new steer.Vector(cx, cy), 0xFF33FF, 0.1, 1);
-                                    result.push(itemFound);
-                                }
-                            }
-                            else {
-                                result.push(itemFound);
-                            }
-                        }
-                    });
-                }
+                });
                 return (result.length > 0) ? result : null;
             };
             return QuadTree;

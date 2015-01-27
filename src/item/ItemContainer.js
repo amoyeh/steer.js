@@ -139,6 +139,7 @@ var steer;
                 }
                 if (this.threeDebugItem) {
                 }
+                this.selector = undefined;
                 this.domain = undefined;
             };
             ItemEntity.NO_UNIT_COLLIDE = 1;

@@ -170,8 +170,14 @@
             if (this.selector) {
                 this.selector.clear();
                 this.items.each((item: any) => {
-                    var itemSelector: item.QuadSelector = this.selector.getItemSelector(item);
-                    if (itemSelector) this.selector.insert(itemSelector);
+                    if (item["b2body"] != null) {
+                        var entity: item.ItemEntity = item;
+                        var itemSelector: item.QuadSelector = this.selector.getItemSelector(item);
+                        if (itemSelector) {
+                            this.selector.insert(itemSelector);
+                            entity.selector = itemSelector;
+                        }
+                    }
                 });
             }
             //update every DebugRender QuadTree

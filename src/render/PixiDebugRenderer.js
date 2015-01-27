@@ -436,9 +436,10 @@ var steer;
                 g.moveTo(fromPos.x - 0.5, fromPos.y - 0.5);
                 g.lineTo(toPos.x - 0.5, toPos.y - 0.5);
             };
-            PixiDebugRenderer.prototype.drawRectangle = function (x, y, w, h, color, alpha) {
+            PixiDebugRenderer.prototype.drawRectangle = function (x, y, w, h, color, alpha, width) {
+                if (width === void 0) { width = 0.03; }
                 var g = this.guideGrahpic;
-                g.lineStyle(0.03, color, alpha);
+                g.lineStyle(width, color, alpha);
                 g.drawRect(x - .5, y - .5, w, h);
                 g.endFill();
             };

@@ -481,10 +481,12 @@ var steer;
             this.logicTicker = null;
         }
         SteerTimer.prototype.start = function () {
-            this.accumulateLogicTime = 0;
-            this.lastLogicUpdate = Date.now();
-            this.LogicPerMsec = Math.round(1000 / this.TPS);
-            this.logicIntervalUpdate();
+            if (!this.isRunning()) {
+                this.accumulateLogicTime = 0;
+                this.lastLogicUpdate = Date.now();
+                this.LogicPerMsec = Math.round(1000 / this.TPS);
+                this.logicIntervalUpdate();
+            }
         };
 
         SteerTimer.prototype.updateTPS = function (value) {
@@ -662,6 +664,7 @@ var steer;
                 }
                 if (this.threeDebugItem) {
                 }
+                this.selector = undefined;
                 this.domain = undefined;
             };
             ItemEntity.NO_UNIT_COLLIDE = 1;
@@ -939,16 +942,16 @@ var steer;
                         }
                     }
                     var rayInfo = this.c_rayInfo;
-
                     var maxRadius = Math.max(this.separateRadius, this.cohesionRadius, this.alignRadius);
                     var lowerV = new box2d.b2Vec2(this.getb2X() - maxRadius, this.getb2Y() - maxRadius);
                     var upperV = new box2d.b2Vec2(this.getb2X() + maxRadius, this.getb2Y() + maxRadius);
                     bodyAABB.Combine1({ lowerBound: lowerV, upperBound: upperV });
-
                     if (this.averageVelocity().mag() > 0) {
-                        for (var s = 0; s < rayInfo.length; s += 2) {
-                            bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
-                            bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
+                        if (steer.Vector.distance(rayInfo[0], this.getb2Position()) < this.c_velocityLength) {
+                            for (var s = 0; s < rayInfo.length; s += 2) {
+                                bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
+                                bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
+                            }
                         }
                     }
                     var tx = bodyAABB.lowerBound.x;
@@ -1833,16 +1836,19 @@ var steer;
             };
 
             QuadNode.prototype.insert = function (item) {
-                var i;
+                var dirType;
                 if (this.nodes.length > 0) {
-                    i = this.findInsertNode(item);
-                    if (i === QuadNode.PARENT) {
+                    dirType = this.findInsertNode(item);
+                    if (dirType === QuadNode.PARENT) {
                         this.items.push(item);
+                        item.parent = this;
                     } else {
-                        this.nodes[i].insert(item);
+                        this.nodes[dirType].insert(item);
+                        item.parent = this.nodes[dirType];
                     }
                 } else {
                     this.items.push(item);
+                    item.parent = this;
                     if (this.items.length > this.maxChildren && this.depth < this.maxDepth) {
                         this.divide();
                     }
@@ -1930,31 +1936,16 @@ var steer;
                 return result;
             };
 
-            QuadTree.prototype.quadTreeSelect = function (item, optimizeDist) {
-                if (typeof optimizeDist === "undefined") { optimizeDist = false; }
+            QuadTree.prototype.quadTreeSelect = function (item) {
                 var result = [];
-                var selector = this.getItemSelector(item);
-                if (selector) {
-                    if (optimizeDist) {
-                        var bbox = item.getBoundingBox();
-                        var bp = new steer.Vector(bbox.x + bbox.w * .5, bbox.y + bbox.h * .5);
-                        var blen = (bbox.w + bbox.h) * 2;
+
+                var useSelector = item.selector;
+                this.retrieve(useSelector, function (itemFound) {
+                    if (itemFound.data != item) {
+                        result.push(itemFound);
                     }
-                    this.retrieve(selector, function (itemFound) {
-                        if (itemFound.data != item) {
-                            if (optimizeDist) {
-                                var cx = itemFound.x + itemFound.width * .5;
-                                var cy = itemFound.y + itemFound.height * .5;
-                                if (steer.Vector.distanceSq(bp, new steer.Vector(cx, cy)) < (blen * blen)) {
-                                    steer.render.PixiDebugRenderer.instance.drawDot(new steer.Vector(cx, cy), 0xFF33FF, 0.1, 1);
-                                    result.push(itemFound);
-                                }
-                            } else {
-                                result.push(itemFound);
-                            }
-                        }
-                    });
-                }
+                });
+
                 return (result.length > 0) ? result : null;
             };
             return QuadTree;
@@ -2162,9 +2153,14 @@ var steer;
             if (this.selector) {
                 this.selector.clear();
                 this.items.each(function (item) {
-                    var itemSelector = _this.selector.getItemSelector(item);
-                    if (itemSelector)
-                        _this.selector.insert(itemSelector);
+                    if (item["b2body"] != null) {
+                        var entity = item;
+                        var itemSelector = _this.selector.getItemSelector(item);
+                        if (itemSelector) {
+                            _this.selector.insert(itemSelector);
+                            entity.selector = itemSelector;
+                        }
+                    }
                 });
             }
 
@@ -3449,9 +3445,10 @@ var steer;
                 g.moveTo(fromPos.x - 0.5, fromPos.y - 0.5);
                 g.lineTo(toPos.x - 0.5, toPos.y - 0.5);
             };
-            PixiDebugRenderer.prototype.drawRectangle = function (x, y, w, h, color, alpha) {
+            PixiDebugRenderer.prototype.drawRectangle = function (x, y, w, h, color, alpha, width) {
+                if (typeof width === "undefined") { width = 0.03; }
                 var g = this.guideGrahpic;
-                g.lineStyle(0.03, color, alpha);
+                g.lineStyle(width, color, alpha);
                 g.drawRect(x - .5, y - .5, w, h);
                 g.endFill();
             };

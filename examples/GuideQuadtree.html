@@ -16,9 +16,15 @@
         <div id="controls">
 
             <div class="rowUis">
-                <div class="uiSet" style="width: 150px;">
+                <div class="uiSet" style="width: 300px;">
                     <input type="range" class="uiRange" id="rangeQuadId" min="0" max="9" step="1" value="0" />
                     <div class="uiRangeTxt" id="rangeQuadIdTxt">Target Index: 0</div>
+                </div>
+                <div class="uiSet" style="width: 140px;">
+                    <input type="button" id="btnRun" class="uiBtn" style="width:120px;" value="Run" />
+                </div>
+                <div class="uiSet" style="width: 140px;">
+                    <input type="button" id="btnRunStep" class="uiBtn" style="width:120px;" value="Run A Step" />
                 </div>
             </div>
         </div>
@@ -41,11 +47,11 @@
             steer.item.Creator.pixelCreateFormat = true;
 
             //建立QuadTree (x: number, y: number, w: number, h: number, depth: number, maxChildren: number = 3, maxDepth: number = 4)
-            var quadTree = new steer.item.QuadTree(0, 0, 1024 / 30, 660 / 30, 3);
+            var quadTree = new steer.item.QuadTree(0, 0, 1024 / 30, 660 / 30, 2, 4);
             quadTree.drawDebug = true;
             domain.setupSelector(quadTree);
 
-            //建立 10 個 Unit 物件 並設定為隨機位置
+            //建立 20 個 Unit 物件 並設定為隨機位置
             var units = [];
             var unitInfo = { x: 0, y: 0, radius: 10, maxForce: 1, maxSpeed: 5, dynamic: true, canCollide: true };
             for (var t = 0; t < 20 ; t++) {
@@ -81,11 +87,8 @@
             }
             var borders = steer.item.Creator.createPolygonBorder(borderInfo);
 
-            var myTimer = new steer.SteerTimer(30);
-            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
-                var delta = e.values.delta;
+            function updateCall(delta) {
                 domain.preUpdate();
-
                 //隨機移動更新
                 var len = units.length;
                 while (len--) {
@@ -93,51 +96,50 @@
                     units[len].applyForce(wanderForce);
                     wrapUnit(units[len]); //in controlHelper.js
                 }
-
                 wrapUnit(cricle2);
                 wrapUnit(poly2);
                 wrapUnit(poly3);
-
+                //繪製 quadTree 除錯資訊 ，使用於此範例
                 //清除 pixiDR.drawDot .. pixiDR.drawSegment 圖形更新
                 pixiDR.guideGrahpic.clear();
-
-                //繪製quadTree 資訊
-                var qsels = domain.selector.quadTreeSelect(units[targetId], false);
+                var targetUnit = units[targetId];
+                var qsels = domain.selector.quadTreeSelect(targetUnit);
                 if (qsels) {
                     for (var k = 0; k < qsels.length; k++) {
                         if (qsels[k].data.b2body) {
                             pixiDR.drawDot(qsels[k].data.getb2Position(), 0x33CC33, 0.05);
-                            pixiDR.drawSegment(units[targetId].getb2Position(), qsels[k].data.getb2Position(), 0x33CC33, 0.05, 0.2);
+                            pixiDR.drawSegment(targetUnit.getb2Position(), qsels[k].data.getb2Position(), 0x33CC33, 0.05, 0.2);
                         }
                     }
+                    if (targetUnit.selector.parent) {
+                        //drawRectangle(x: number, y: number, w: number, h: number, color: number, alpha: number)
+                        //console.log(targetUnit.selector.parent);
+                        var pNode = targetUnit.selector.parent;
+                        pixiDR.drawRectangle(pNode.x, pNode.y, pNode.width, pNode.height, 0xFF9999, 0.3, 0.3);
+                    }
                 }
-                pixiDR.drawDot(units[targetId].getb2Position(), 0xFF33CC, 0.2);
+                pixiDR.drawDot(targetUnit.getb2Position(), 0xFF33CC, 0.2);
                 domain.update(delta);
-            });
+            }
 
+
+            var myTimer = new steer.SteerTimer(30);
+            myTimer.addEvent(steer.Event.LOGIC_UPDATE, function (e) {
+                updateCall(e.values.delta);
+            });
             myTimer.addEvent(steer.Event.RENDER_UPDATE, function (e) {
                 domain.integrate(e.values.delta);
             });
-
-            myTimer.start();
+            // myTimer.start();
 
             //testing a step by keyboard
-            //document.addEventListener("keydown", function (e) {
-            //    if (e.keyCode == 32) {
-            //        var delta = 20;
-            //        var now = new Date().getTime();
-            //        domain.preUpdate();
-            //        domain.update(delta);
-            //        var len = units.length;
-            //        while (len--) {
-            //            var wanderForce = steer.controls.Behavior.wander(units[len]);
-            //            units[len].applyForce(wanderForce);
-            //            wrapUnit(units[len]); //in controlHelper.js
-            //        }
-            //        pixiDR.integrate(0);
-            //        e.preventDefault();
-            //    }
-            //});
+            document.addEventListener("keydown", function (e) {
+                if (e.keyCode == 32) {
+                    updateCall(20);
+                    domain.integrate(0);
+                    e.preventDefault();
+                }
+            });
 
             ////////////////////////////////////////////////////////
             //UI 控制
@@ -145,6 +147,17 @@
             document.getElementById("rangeQuadId").addEventListener("input", function (e) {
                 document.getElementById("rangeQuadIdTxt").innerText = "Target Index: " + e.target.value;
                 targetId = e.target.value;
+                updateCall(20);
+                domain.integrate(0);
+            });
+            document.getElementById("btnRunStep").addEventListener("click", function (e) {
+                myTimer.stop();
+                updateCall(20);
+                domain.integrate(0);
+            });
+            document.getElementById("btnRun").addEventListener("click", function (e) {
+                myTimer.start();
+
             });
 
         }
@@ -152,4 +165,5 @@
     </script>
 
 </body>
+
 </html>

@@ -100,6 +100,8 @@
                     }
                 }
 
+
+                //設定自訂顯示更新物件
                 var baseDR = new steer.BaseRender(domain, 1024, 660);
                 var imgPos = [];
                 for (var q = 5; q < 23; q++) imgPos.push(q);
@@ -107,6 +109,7 @@
                 //var imgPos = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 1, 2, 3, 4, 5,];
                 var oneDeg = 360 / 22;
                 var offsetDeg = 0.0174 * 10;
+                //設定每個物件更新時畫面更新
                 baseDR.updateObject = {
                     "updateItem": function (item, xto, yto, rto, delta) {
                         if (item.data) {
@@ -123,6 +126,7 @@
                         pixiRenderer.render(pixiStage);
                     }
                 }
+                //增加自訂義 renderer 至domain
                 domain.addRenderer(baseDR);
 
 

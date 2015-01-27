@@ -152,9 +152,11 @@ var steer;
                     var upperV = new box2d.b2Vec2(this.getb2X() + maxRadius, this.getb2Y() + maxRadius);
                     bodyAABB.Combine1({ lowerBound: lowerV, upperBound: upperV });
                     if (this.averageVelocity().mag() > 0) {
-                        for (var s = 0; s < rayInfo.length; s += 2) {
-                            bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
-                            bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
+                        if (steer.Vector.distance(rayInfo[0], this.getb2Position()) < this.c_velocityLength) {
+                            for (var s = 0; s < rayInfo.length; s += 2) {
+                                bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
+                                bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
+                            }
                         }
                     }
                     var tx = bodyAABB.lowerBound.x;

@@ -232,16 +232,17 @@
                     }
                 }
                 var rayInfo: Vector[] = this.c_rayInfo;
-
                 var maxRadius: number = Math.max(this.separateRadius, this.cohesionRadius, this.alignRadius);
                 var lowerV: box2d.b2Vec2 = new box2d.b2Vec2(this.getb2X() - maxRadius, this.getb2Y() - maxRadius);
                 var upperV: box2d.b2Vec2 = new box2d.b2Vec2(this.getb2X() + maxRadius, this.getb2Y() + maxRadius);
                 bodyAABB.Combine1({ lowerBound: lowerV, upperBound: upperV });
-                //this.averageVelocity().mag
                 if (this.averageVelocity().mag() > 0) {
-                    for (var s: number = 0; s < rayInfo.length; s += 2) {
-                        bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
-                        bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
+                    //make sure rayinfo is close to current position, might store old value from preupdate cache at debugmode
+                    if (Vector.distance(rayInfo[0], this.getb2Position()) < this.c_velocityLength) {
+                        for (var s: number = 0; s < rayInfo.length; s += 2) {
+                            bodyAABB.Combine1({ lowerBound: rayInfo[s], upperBound: rayInfo[s + 1] });
+                            bodyAABB.Combine1({ lowerBound: rayInfo[s + 1], upperBound: rayInfo[s] });
+                        }
                     }
                 }
                 var tx: number = bodyAABB.lowerBound.x;

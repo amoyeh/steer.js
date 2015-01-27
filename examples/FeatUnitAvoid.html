@@ -41,8 +41,8 @@
                     <input type="button" id="btnShowBox2d" class="baseBtn" style="width:140px;" value="Show Box2d Debug" />
                 </div>
                 <div class="uiSet" style="width: 400px;">
-                    <input type="range" id="rangeIntegrate" min="10" max="60" step="1" value="20" />
-                    <div id="rangeIntegrateTxt">20 FPS</div>
+                    <input type="range" id="rangeIntegrate" min="20" max="60" step="1" value="30" />
+                    <div id="rangeIntegrateTxt">30 FPS</div>
                 </div>
             </div>
 
@@ -100,10 +100,10 @@
                 });
                 newOne.toPt = { x: settings[t].e.x / 30, y: settings[t].e.y / 30 };
                 newOne.startPt = { x: settings[t].s.x / 30, y: settings[t].s.y / 30 };
-                newOne.rayFrontRatio = 1;
+                newOne.rayFrontRatio = 2;
                 units.push(newOne);
                 var ddinfo = steer.render.DebugDrawInfo.create(newOne);
-                ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST | steer.render.DebugDrawInfo.AVOID_FORCE;
+                ddinfo.drawMask = steer.render.DebugDrawInfo.AVOID_FORCE;
             }
 
             function logicUpdate() {
@@ -167,9 +167,9 @@
                     var ddinfo = steer.render.DebugDrawInfo.getInfo(units[t]);
                     if (ddinfo) {
                         if (document.getElementById("ckShowForce").checked) {
-                            ddinfo.drawMask |= (steer.render.DebugDrawInfo.AVOID_FORCE | steer.render.DebugDrawInfo.UNIT_RAYCAST);
+                            ddinfo.drawMask |= (steer.render.DebugDrawInfo.AVOID_FORCE);
                         } else {
-                            ddinfo.drawMask &= ~(steer.render.DebugDrawInfo.AVOID_FORCE | steer.render.DebugDrawInfo.UNIT_RAYCAST);
+                            ddinfo.drawMask &= ~(steer.render.DebugDrawInfo.AVOID_FORCE);
                         }
                     }
                 }

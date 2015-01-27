@@ -20,10 +20,12 @@
         }
 
         public start(): void {
-            this.accumulateLogicTime = 0;
-            this.lastLogicUpdate = Date.now();
-            this.LogicPerMsec = Math.round(1000 / this.TPS);
-            this.logicIntervalUpdate();
+            if (!this.isRunning()) {
+                this.accumulateLogicTime = 0;
+                this.lastLogicUpdate = Date.now();
+                this.LogicPerMsec = Math.round(1000 / this.TPS);
+                this.logicIntervalUpdate();
+            }
         }
 
         public updateTPS(value: number): void {

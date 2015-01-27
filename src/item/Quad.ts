@@ -85,20 +85,24 @@
             return QuadNode.PARENT;
         }
 
-        public insert(item: any): void {
-            var i: any;
+        public insert(item: QuadSelector): void {
+            var dirType: any;
             if (this.nodes.length > 0) {
-                i = this.findInsertNode(item);
-                if (i === QuadNode.PARENT) {
+                dirType = this.findInsertNode(item);
+                if (dirType === QuadNode.PARENT) {
                     this.items.push(item);
+                    item.parent = this;
                 } else {
-                    this.nodes[i].insert(item);
+                    this.nodes[dirType].insert(item);
+                    item.parent = this.nodes[dirType];
                 }
             } else {
                 this.items.push(item);
+                item.parent = this;
                 if (this.items.length > this.maxChildren && this.depth < this.maxDepth) {
                     this.divide();
                 }
+
             }
         }
 
@@ -138,6 +142,7 @@
         public width: number;
         public height: number;
         public data: any;
+        public parent: any;
 
         constructor(x: number, y: number, width: number, height: number, data?: any) {
             this.x = x;
@@ -186,30 +191,29 @@
             return result;
         }
 
-        public quadTreeSelect(item: ItemEntity, optimizeDist: boolean = false): QuadSelector[] {
+        public quadTreeSelect(item: ItemEntity): QuadSelector[] {
             var result: QuadSelector[] = [];
-            var selector: QuadSelector = this.getItemSelector(item);
-            if (selector) {
-                if (optimizeDist) {
-                    var bbox = item.getBoundingBox();
-                    var bp = new Vector(bbox.x + bbox.w * .5, bbox.y + bbox.h * .5);
-                    var blen = (bbox.w + bbox.h) * 2;
+            //if (optimizeDist) {
+            //    var bbox = item.getBoundingBox();
+            //    var bp = new Vector(bbox.x + bbox.w * .5, bbox.y + bbox.h * .5);
+            //    var blen = (bbox.w + bbox.h) * 2;
+            //}
+            var useSelector = item.selector;
+            this.retrieve(useSelector, (itemFound: any) => {
+                if (itemFound.data != item) {
+                    //if (optimizeDist) {
+                    //    var cx = itemFound.x + itemFound.width * .5;
+                    //    var cy = itemFound.y + itemFound.height * .5;
+                    //    if (Vector.distanceSq(bp, new Vector(cx, cy)) < (blen * blen)) {
+                    //        render.PixiDebugRenderer.instance.drawDot(new Vector(cx, cy), 0xFF33FF, 0.1, 1);
+                    //        result.push(itemFound);
+                    //    }
+                    //} else {
+                    result.push(itemFound);
+                    // }
                 }
-                this.retrieve(selector, (itemFound: any) => {
-                    if (itemFound.data != item) {
-                        if (optimizeDist) {
-                            var cx = itemFound.x + itemFound.width * .5;
-                            var cy = itemFound.y + itemFound.height * .5;
-                            if (Vector.distanceSq(bp, new Vector(cx, cy)) < (blen * blen)) {
-                                render.PixiDebugRenderer.instance.drawDot(new Vector(cx, cy), 0xFF33FF, 0.1, 1);
-                                result.push(itemFound);
-                            }
-                        } else {
-                            result.push(itemFound);
-                        }
-                    }
-                });
-            }
+            });
+            //}
             return (result.length > 0) ? result : null;
         }
 

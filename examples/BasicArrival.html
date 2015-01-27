@@ -12,9 +12,21 @@
 </head>
 <body onload="initScene();">
 
-    <div id="mainView" style=" height:660px; margin-top: -330px;">
+    <div id="mainView" style="height:700px; margin-top:-350px;">
         <div id="divScreen" style="border-radius:4px;"></div>
         <div id="steerLogo"></div>
+        <div id="controls" style="height:60px;">
+            <div class="rowUis">
+                <div class="uiSet" style="width:300px;">
+                    <input type="range" class="uiRange" id="rangeMaxGreen" min="0.1" max="2" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangeMaxGreenTxt">Green MaxForce: 1</div>
+                </div>
+                <div class="uiSet" style="width:300px;"> 
+                    <input type="range" class="uiRange" id="rangeMaxRed" min="0.1" max="2" step="0.1" value="1" />
+                    <div class="uiRangeTxt" id="rangeMaxRedTxt">Red MaxForce: 1</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="text/javascript">
@@ -24,11 +36,12 @@
         //----------------------------------------------------------------------
         var mousePt = { x: 0, y: 0 };
         function mouseMoveCall(e) { mouseUpdate(e); }
-        document.addEventListener("mousedown", function (e) {
+        document.getElementById("divScreen").addEventListener("mousedown", function (e) {
             mouseUpdate(e);
-            document.addEventListener("mousemove", mouseMoveCall);
+            document.getElementById("divScreen").addEventListener("mousemove", mouseMoveCall);
+
         });
-        document.addEventListener("mouseup", function (e) { document.removeEventListener("mousemove", mouseMoveCall); });
+        document.addEventListener("mouseup", function (e) { document.getElementById("divScreen").removeEventListener("mousemove", mouseMoveCall); });
         document.addEventListener("touchstart", mouseUpdate);
         document.addEventListener("touchmove", mouseUpdate);
         function mouseUpdate(e) {
@@ -39,7 +52,6 @@
                 mousePt.x = (e.pageX - document.getElementById("mainView").offsetLeft) / 30;
                 mousePt.y = (e.pageY - document.getElementById("mainView").offsetTop) / 30;
             }
-            e.preventDefault();
         }
         //----------------------------------------------------------------------
 
@@ -57,15 +69,19 @@
             steer.item.Creator.setDomainReference(domain);
             steer.item.Creator.pixelCreateFormat = true;
 
-            var createInfo = { x: 200, y: 200, radius: 20, maxForce: 10, maxSpeed: 50, dynamic: true, canCollide: false };
-            var newUnit = steer.item.Creator.createUnit(createInfo);
-            //var newUnit2 = steer.item.Creator.createUnit({ x: 300, y: 200, radius: 15, maxForce: 1, maxSpeed: 50, dynamic: true, canCollide: false });
-            //unit 除錯顯示設定
-            var ddinfo = steer.render.DebugDrawInfo.create(newUnit);
-            ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+            var createInfo = { x: 200, y: 200, radius: 20, maxForce: 2, maxSpeed: 10, dynamic: true, canCollide: false };
+            var greenUnit = steer.item.Creator.createUnit(createInfo);
 
-            //var ddinfo = steer.render.DebugDrawInfo.create(newUnit2);
-            //ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+            //unit 除錯顯示設定
+            var ddinfo = steer.render.DebugDrawInfo.create(greenUnit);
+            ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+            ddinfo.color = 0x66FF66;
+
+            var redUnit = steer.item.Creator.createUnit({ x: 200, y: 200, radius: 20, maxForce: 0.5, maxSpeed: 10, dynamic: true, canCollide: false });
+            var ddinfo = steer.render.DebugDrawInfo.create(redUnit);
+            ddinfo.drawMask = steer.render.DebugDrawInfo.UNIT_RAYCAST;
+            ddinfo.color = 0xFF6666;
+
 
             // 建立 SteerTimer 設定更新頻率 30 FPS
             var myTimer = new steer.SteerTimer(30);
@@ -80,10 +96,10 @@
                 domain.preUpdate();
 
                 //透過 steer.controls.Behavior 物件 設定 Unit 到達 滑鼠作標 (Arrive behavior)
-                var arriveForce = steer.controls.Behavior.arrival(newUnit, mousePt);
-                newUnit.applyForce(arriveForce);
+                var arriveForce = steer.controls.Behavior.arrival(greenUnit, mousePt);
+                greenUnit.applyForce(arriveForce);
 
-                //newUnit2.applyForce(steer.controls.Behavior.seek(newUnit2, mousePt));
+                redUnit.applyForce(steer.controls.Behavior.arrival(redUnit, mousePt));
 
 
                 //更新 domain 帶入每次更新的時間差，透過經過時間做為移動大小的依據
@@ -107,27 +123,16 @@
             //SteerTimer 開始運算
             myTimer.start();
 
-            document.body.addEventListener("keydown", function (e) {
-                if (e.keyCode == 32) {
-                    var delta = 50;
-                    domain.preUpdate();
-
-                    var arriveForce = steer.controls.Behavior.arrival(newUnit, mousePt);
-                    newUnit.applyForce(arriveForce);
-
-                    //newUnit2.applyForce(steer.controls.Behavior.seek(newUnit2, mousePt));
-
-                    domain.update(delta);
-
-                    console.log(newUnit.velocity.toString());
-
-                    domain.integrate(0);
-                    pixiDR.guideGrahpic.clear();
-                    pixiDR.drawDot(mousePt, 0x99CC99, newUnit.maxSpeed * 1.5, 0.5);
-
-                }
+            //UI
+            document.getElementById("rangeMaxGreen").addEventListener("input", function (e) {
+                document.getElementById("rangeMaxGreenTxt").innerText = "Green MaxForce: " + e.target.value;
+                greenUnit.maxForce = e.target.value / 30;
             });
 
+            document.getElementById("rangeMaxRed").addEventListener("input", function (e) {
+                document.getElementById("rangeMaxRedTxt").innerText = "Red MaxForce: " + e.target.value;
+                redUnit.maxForce = e.target.value / 30;
+            });
 
         }
 

@@ -186,7 +186,7 @@
                         g.lineTo(rayPts[s + 1].x - ix - 0.5, rayPts[s + 1].y - iy - 0.5);
                     }
                 }
-                
+
             }
             if (ddinfo.drawMask & DebugDrawInfo.UNIT_SEPARATION) {
                 g.lineStyle(0.03, DebugColors.DC_SEPARATION, DebugColors.DC_SEPARATION_A);
@@ -484,9 +484,9 @@
             g.moveTo(fromPos.x - 0.5, fromPos.y - 0.5);
             g.lineTo(toPos.x - 0.5, toPos.y - 0.5);
         }
-        public drawRectangle(x: number, y: number, w: number, h: number, color: number, alpha: number): void {
+        public drawRectangle(x: number, y: number, w: number, h: number, color: number, alpha: number, width: number= 0.03): void {
             var g: PIXI.Graphics = this.guideGrahpic;
-            g.lineStyle(0.03, color, alpha);
+            g.lineStyle(width, color, alpha);
             g.drawRect(x - .5, y - .5, w, h);
             g.endFill();
         }
